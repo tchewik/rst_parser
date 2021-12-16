@@ -31,11 +31,11 @@ def main():
                            help='path to data files')
     subparser.add_argument('--embed', default='',
                            help='path to pretrained embeddings')
-    subparser.add_argument('--unk', default='unk',
+    subparser.add_argument('--unk', default='unknown',
                            help='unk token in pretrained embeddings')
-    subparser.add_argument('--n-embed', default=100, type=int,
+    subparser.add_argument('--n-embed', default=300, type=int,
                            help='dimension of embeddings')
-    subparser.add_argument('--bert', default='bert-base-cased',
+    subparser.add_argument('--bert', default='DeepPavlov/rubert-base-cased',
                            help='which bert model to use')
     # subparser.add_argument('--beam-size', default=1, type=int,
     #                        help='beam size in inference')

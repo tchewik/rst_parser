@@ -501,7 +501,7 @@ class DiscourseMetricDoc(Metric):
                     Relation =Relation_left
                 span_label.append((int(left_start),int(right_end), Relation, Nuclearity_left+Nuclearity_right))
                 segmentpoints.append(left_end)
-            assert len(set(segmentpoints))==len(span_label), f"something wrong segmentpoints:{segmentpoints}; span_label:{span_label}"
+#             assert len(set(segmentpoints))==len(span_label), f"something wrong segmentpoints:{segmentpoints}; span_label:{span_label}"
             return span_label, segmentpoints
 
     @property

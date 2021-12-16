@@ -32,7 +32,7 @@ class Embedding(object):
     def load(cls, path, unk=None):
         with open(path, 'r') as f:
             lines = [line for line in f]
-        splits = [line.split() for line in lines]
+        splits = [line.split() for line in lines][1:]
         tokens, vectors = zip(*[(s[0], list(map(float, s[1:])))
                                 for s in splits])
 

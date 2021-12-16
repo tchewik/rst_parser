@@ -294,15 +294,15 @@ class PointingDiscourseModel(nn.Module):
             # print(split_index)
             # print(curr_input_l)
             # print(base_index)
-            hyp_l = curr_input_l.gather(dim=1, index=base_index)
+            hyp_l = curr_input_l.gather(dim=1, index=base_index.type(torch.int64))
             # print(hyp_l)
-            hyp_r = curr_input_r.gather(dim=1, index=base_index)
+            hyp_r = curr_input_r.gather(dim=1, index=base_index.type(torch.int64))
             # print(split_index)
             # print(split_index.shape)
             base_index_expand = base_index.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 2, dec_len)
-            stacked_inputspan = stacked_inputspan.gather(dim=1, index=base_index_expand)
+            stacked_inputspan = stacked_inputspan.gather(dim=1, index=base_index_expand.type(torch.int64))
             base_index_parsing_order = base_index.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 3, dec_len)
-            stacked_parsing_order = stacked_parsing_order.gather(dim=1, index=base_index_parsing_order)
+            stacked_parsing_order = stacked_parsing_order.gather(dim=1, index=base_index_parsing_order.type(torch.int64))
             stacked_parsing_order[:, :, 0, t] = hyp_l
             stacked_parsing_order[:, :, 1, t] = torch.where(
                 (split_index > hyp_l) & (split_index <= hyp_r), split_index, hyp_l)
@@ -318,7 +318,8 @@ class PointingDiscourseModel(nn.Module):
             position_rightspan = (t + split_index - hyp_l).clamp(max=dec_len - 1)
             # print(position_rightspan)
             position_rightspan_expand = position_rightspan.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 2, 1)
-            candidate_rightspan = stacked_inputspan.gather(dim=3, index=position_rightspan_expand).squeeze(-1)
+            candidate_rightspan = stacked_inputspan.gather(dim=3,
+                                                           index=position_rightspan_expand.type(torch.int64)).squeeze(-1)
             candidate_rightspan[:, :, 0] = torch.where(1 + split_index < hyp_r, split_index,
                                                        candidate_rightspan[:, :, 0])
             candidate_rightspan[:, :, 1] = torch.where(1 + split_index < hyp_r, hyp_r,
@@ -327,7 +328,7 @@ class PointingDiscourseModel(nn.Module):
 
             batch_index = lens.new_tensor(range(batch_size)).view(batch_size, 1)
             # hx_index = (base_index + batch_index * prev_num_hyp).view(batch_size * num_hyp)
-            hx_index = (base_index + batch_index * num_hyp).view(batch_size * num_hyp)
+            hx_index = (base_index + batch_index * num_hyp).view(batch_size * num_hyp).type(torch.int64)  # ???!!!
             if isinstance(new_last_hidden_state, tuple):
                 new_hx, new_cx = new_last_hidden_state
                 new_hx = new_hx[:, hx_index]
@@ -346,8 +347,9 @@ class PointingDiscourseModel(nn.Module):
         padding_nonparsing_mask = final_stacked_parsing_order[:, 2, :].ne(
             final_stacked_parsing_order[:, 1, :]).to(torch.long)
         _, padding_nonparsing_mask_index = torch.sort(padding_nonparsing_mask, dim=1, descending=True)
-        final_parsing_order = final_stacked_parsing_order.gather(dim=-1, index=padding_nonparsing_mask_index.unsqueeze(
-            1).expand(batch_size, 3, num_steps))
+        final_parsing_order = final_stacked_parsing_order.gather(dim=-1,
+                                                                 index=padding_nonparsing_mask_index.unsqueeze(
+            1).expand(batch_size, 3, num_steps).type(torch.int64))
         final_parsing_length = padding_nonparsing_mask.sum(dim=-1)
         max_parsing_length = int(final_parsing_length.max())
         final_parsing_order = final_parsing_order[:,:,:max_parsing_length]

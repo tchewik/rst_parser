@@ -6,8 +6,10 @@ import nltk, re
 from src.utils.logging import get_logger, progress_bar
 from src.utils.util_discourse import RelationAndNucleus2Label, Label2RelationAndNucleus
 from src.utils.util_spmrl import custom_chomsky_normal_form, clean_leaves
+
 logger = get_logger(__name__)
 from copy import deepcopy
+
 
 class Transform(object):
     """
@@ -227,10 +229,10 @@ class CoNLL(Transform):
         """
 
         if isinstance(tokens[0], str):
-            s = '\n'.join([f"{i}\t{word}\t" + '\t'.join(['_']*8)
+            s = '\n'.join([f"{i}\t{word}\t" + '\t'.join(['_'] * 8)
                            for i, word in enumerate(tokens, 1)])
         else:
-            s = '\n'.join([f"{i}\t{word}\t_\t{tag}\t" + '\t'.join(['_']*6)
+            s = '\n'.join([f"{i}\t{word}\t_\t{tag}\t" + '\t'.join(['_'] * 6)
                            for i, (word, tag) in enumerate(tokens, 1)])
         return s + '\n'
 
@@ -259,13 +261,13 @@ class CoNLL(Transform):
 
         pairs = [(h, d) for d, h in enumerate(sequence, 1) if h >= 0]
         for i, (hi, di) in enumerate(pairs):
-            for hj, dj in pairs[i+1:]:
+            for hj, dj in pairs[i + 1:]:
                 (li, ri), (lj, rj) = sorted([hi, di]), sorted([hj, dj])
                 if li <= hj <= ri and hi == dj:
                     return False
                 if lj <= hi <= rj and hj == di:
                     return False
-                if (li < lj < ri or li < rj < ri) and (li - lj)*(ri - rj) > 0:
+                if (li < lj < ri or li < rj < ri) and (li - lj) * (ri - rj) > 0:
                     return False
         return True
 
@@ -399,7 +401,7 @@ class CoNLLSentence(Sentence):
         for i, line in enumerate(lines):
             value = line.split('\t')
             if value[0].startswith('#') or not value[0].isdigit():
-                self.annotations[-i-1] = line
+                self.annotations[-i - 1] = line
             else:
                 self.annotations[len(self.values)] = line
                 self.values.append(value)
@@ -438,7 +440,7 @@ class Tree(Transform):
         self.POS = POS
         self.TREE = TREE
         self.CHART = CHART
-        self.PARSINGORDER =PARSINGORDER
+        self.PARSINGORDER = PARSINGORDER
 
     @property
     def src(self):
@@ -524,7 +526,7 @@ class Tree(Transform):
         return tree
 
     @classmethod
-    def parsingorder_dfs(cls,tree, delete_labels=None, equal_labels=None):
+    def parsingorder_dfs(cls, tree, delete_labels=None, equal_labels=None):
         def track(tree, i):
             label = tree.label()
             if delete_labels is not None and label in delete_labels:
@@ -593,7 +595,7 @@ class Tree(Transform):
             if equal_labels is not None:
                 label = equal_labels.get(label, label)
             if len(tree) == 1 and not isinstance(tree[0], nltk.Tree):
-                return (i+1 if label is not None else i), []
+                return (i + 1 if label is not None else i), []
             j, spans = i, []
             for child in tree:
                 j, s = track(child, j)
@@ -601,6 +603,7 @@ class Tree(Transform):
             if label is not None and j > i:
                 spans = [(i, j, label)] + spans
             return j, spans
+
         return track(tree, 0)[1]
 
     @classmethod
@@ -638,7 +641,7 @@ class Tree(Transform):
 
         def track(node):
             i, j, label = next(node)
-            if j == i+1:
+            if j == i + 1:
                 children = [leaves[i]]
             else:
                 children = track(node) + track(node)
@@ -649,6 +652,7 @@ class Tree(Transform):
             for label in reversed(labels[:-1]):
                 tree = nltk.Tree(label, [tree])
             return [tree]
+
         return nltk.Tree(root, track(iter(sequence)))
 
     def load(self, data, max_len=None, **kwargs):
@@ -722,7 +726,7 @@ class DiscourseTree(Transform):
     """
 
     root = ''
-    fields = ['WORD', 'EDU_BREAK','GOLD_METRIC', 'CHART', 'PARSINGORDER']
+    fields = ['WORD', 'EDU_BREAK', 'GOLD_METRIC', 'CHART', 'PARSINGORDER']
 
     def __init__(self, WORD=None, EDU_BREAK=None, GOLD_METRIC=None, CHART=None, PARSINGORDER=None):
         super().__init__()
@@ -731,7 +735,7 @@ class DiscourseTree(Transform):
         self.EDU_BREAK = EDU_BREAK
         self.GOLD_METRIC = GOLD_METRIC
         self.CHART = CHART
-        self.PARSINGORDER =PARSINGORDER
+        self.PARSINGORDER = PARSINGORDER
 
     @property
     def src(self):
@@ -742,7 +746,7 @@ class DiscourseTree(Transform):
         return self.CHART, self.PARSINGORDER
 
     @classmethod
-    def edu2token(cls,golden_metric_edu, edu_break):
+    def edu2token(cls, golden_metric_edu, edu_break):
         # stack = [(0,len(parsing_order))]
         # NOTE
         # This part to generate parsing order and parsing label in term of edu
@@ -759,9 +763,9 @@ class DiscourseTree(Transform):
                 right_start = int(right_start) - 1
                 right_end = int(right_end) - 1
                 relation_label = RelationAndNucleus2Label(Nuclearity_left,
-                                                               Nuclearity_right,
-                                                               Relation_left,
-                                                               Relation_right)
+                                                          Nuclearity_right,
+                                                          Relation_left,
+                                                          Relation_right)
                 parsing_order_edu.append((left_start, left_end, right_start, right_end))
                 parsing_label.append(relation_label)
 
@@ -824,18 +828,18 @@ class DiscourseTree(Transform):
             for x in parsing_order_self_pointing_edu:
                 if x[0] == x[1] == x[2] == x[3]:
                     start_point = edu_span[x[0]][0]
-                    end_point = edu_span[x[0]][1]+1
+                    end_point = edu_span[x[0]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, end_point, end_point))
                 else:
                     start_point = edu_span[x[0]][0]
                     split_point = edu_span[x[2]][0]
-                    end_point = edu_span[x[3]][1]+1
+                    end_point = edu_span[x[3]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, split_point, end_point))
             parsing_order_token = []
             for i, x in enumerate(parsing_order_edu):
                 start_point = edu_span[x[0]][0]
                 split_point = edu_span[x[2]][0]
-                end_point = edu_span[x[3]][1]+1
+                end_point = edu_span[x[3]][1] + 1
                 parsing_order_token.append((start_point, split_point, end_point, parsing_label[i]))
             # parsing_order_token = []
             # for x in parsing_order_edu:
@@ -848,7 +852,7 @@ class DiscourseTree(Transform):
             # parsing_order_self_pointing_edu = [(0, 0, 0, 0)]
             # edu_span = [(0, edu_break[0])]
             # parsing_order_edu = []
-            parsing_order_self_pointing_token = [(0, edu_break[0]+1, edu_break[0]+1)]
+            parsing_order_self_pointing_token = [(0, edu_break[0] + 1, edu_break[0] + 1)]
             parsing_order_token = []
             # parsing_label_self_pointing = ['None']
             # parsing_label = ['None']
@@ -879,15 +883,15 @@ class DiscourseTree(Transform):
             (0:Nucleus=Joint:11,12:Nucleus=Joint:23)
             (12:Satellite=Attribution:15,16:Nucleus=span:23)'
         """
-        if len(sequence)==0:
+        if len(sequence) == 0:
             return 'NONE'
         else:
-            result=[]
+            result = []
             for (i, k, j, label) in sequence:
                 if k < j:
-                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right\
-                        =Label2RelationAndNucleus(label)
-                    node=f'({i}:{Nuclearity_left}={Relation_left}:{k-1},{k}:{Nuclearity_right}={Relation_right}:{j-1})'
+                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right \
+                        = Label2RelationAndNucleus(label)
+                    node = f'({i}:{Nuclearity_left}={Relation_left}:{k - 1},{k}:{Nuclearity_right}={Relation_right}:{j - 1})'
                 result.append(node)
             return ' '.join(result)
 
@@ -916,7 +920,7 @@ class DiscourseTree(Transform):
 			(0:Nucleus=Joint:11,12:Nucleus=Joint:23)
 			(12:Satellite=Attribution:15,16:Nucleus=span:23)'
 		"""
-        if gold_metric_edu=='NONE':
+        if gold_metric_edu == 'NONE':
             return 'NONE'
         else:
             edu_span = []
@@ -926,14 +930,14 @@ class DiscourseTree(Transform):
                 elif i < len(edu_break):
                     edu_span.append((edu_break[i - 1] + 1, edu_break[i]))
             result = []
-            golden_metric_edu_split=re.split(' ',gold_metric_edu)
+            golden_metric_edu_split = re.split(' ', gold_metric_edu)
             for each_split in golden_metric_edu_split:
                 left_start, Nuclearity_left, Relation_left, left_end, \
                 right_start, Nuclearity_right, Relation_right, right_end = re.split(':|=|,', each_split[1:-1])
-                left_start=int(left_start)-1
-                left_end=int(left_end)-1
-                right_start=int(right_start)-1
-                right_end=int(right_end)-1
+                left_start = int(left_start) - 1
+                left_end = int(left_end) - 1
+                right_start = int(right_start) - 1
+                right_end = int(right_end) - 1
                 node = f'({edu_span[left_start][0]}:{Nuclearity_left}={Relation_left}:{edu_span[left_end][1]},{edu_span[right_start][0]}:{Nuclearity_right}={Relation_right}:{edu_span[right_end][1]})'
                 result.append(node)
             return ' '.join(result)
@@ -958,11 +962,10 @@ class DiscourseTree(Transform):
         #     trees = [self.totree(i, self.root) for i in data]
         assert isinstance(data, str)
         import pickle
-        data_dict=pickle.load(open(data, "rb"))
-        sents=data_dict['InputDocs']
-        edu_break=data_dict['EduBreak_TokenLevel']
-        golden_metric=data_dict['Docs_structure']
-
+        data_dict = pickle.load(open(data, "rb"))
+        sents = data_dict['InputDocs']
+        edu_break = data_dict['EduBreak_TokenLevel']
+        golden_metric = data_dict['Docs_structure']
 
         i, sentences = 0, []
         for sent in progress_bar(sents, leave=False):
@@ -974,6 +977,7 @@ class DiscourseTree(Transform):
             sentences = [i for i in sentences if len(i) < max_len]
 
         return sentences
+
 
 class DiscourseTreeSentence(Sentence):
     """
@@ -993,10 +997,11 @@ class DiscourseTreeSentence(Sentence):
         self.values = [sent,
                        edu_break,
                        golden_metric,
-                       *DiscourseTree.edu2token(golden_metric_edu=golden_metric,edu_break=edu_break)]
+                       *DiscourseTree.edu2token(golden_metric_edu=golden_metric, edu_break=edu_break)]
 
     def __repr__(self):
         return self.values[-2].pformat(1000000)
+
 
 class SPMRL_Tree(Transform):
     """
@@ -1023,7 +1028,7 @@ class SPMRL_Tree(Transform):
         self.POS = POS
         self.TREE = TREE
         self.CHART = CHART
-        self.PARSINGORDER =PARSINGORDER
+        self.PARSINGORDER = PARSINGORDER
 
     @property
     def src(self):
@@ -1060,7 +1065,8 @@ class SPMRL_Tree(Transform):
 
     @classmethod
     def binarize(cls, tree, binarize_direction='left', dummy_label_manipulating='parent'):
-        assert binarize_direction in ['left', 'right'], f"We only support left/right direction here, yours: {binarize_direction}"
+        assert binarize_direction in ['left',
+                                      'right'], f"We only support left/right direction here, yours: {binarize_direction}"
         assert dummy_label_manipulating in ['parent', 'universal',
                                             'universal_node_unary'], f"We only support parent/universal direction here"
         tree = tree.copy(True)
@@ -1081,6 +1087,7 @@ class SPMRL_Tree(Transform):
         tree = custom_chomsky_normal_form(tree, binarize_direction, dummy_label_manipulating, 0, 0)
         tree.collapse_unary(joinChar="====")
         return tree
+
     # def binarize(cls, tree,binarize_direction='left'):
     #     """
     #     Conduct binarization over the tree.
@@ -1131,7 +1138,7 @@ class SPMRL_Tree(Transform):
     #     return tree
 
     @classmethod
-    def parsingorder_dfs(cls,tree, delete_labels=None, equal_labels=None):
+    def parsingorder_dfs(cls, tree, delete_labels=None, equal_labels=None):
         def track(tree, i):
             label = tree.label()
             if delete_labels is not None and label in delete_labels:
@@ -1200,7 +1207,7 @@ class SPMRL_Tree(Transform):
             if equal_labels is not None:
                 label = equal_labels.get(label, label)
             if len(tree) == 1 and not isinstance(tree[0], nltk.Tree):
-                return (i+1 if label is not None else i), []
+                return (i + 1 if label is not None else i), []
             j, spans = i, []
             for child in tree:
                 j, s = track(child, j)
@@ -1208,6 +1215,7 @@ class SPMRL_Tree(Transform):
             if label is not None and j > i:
                 spans = [(i, j, label)] + spans
             return j, spans
+
         return track(tree, 0)[1]
 
     @classmethod
@@ -1245,7 +1253,7 @@ class SPMRL_Tree(Transform):
 
         def track(node):
             i, j, label = next(node)
-            if j == i+1:
+            if j == i + 1:
                 children = [leaves[i]]
             else:
                 children = track(node) + track(node)
@@ -1256,9 +1264,10 @@ class SPMRL_Tree(Transform):
             for label in reversed(labels[:-1]):
                 tree = nltk.Tree(label, [tree])
             return [tree]
+
         return nltk.Tree(root, track(iter(sequence)))
 
-    def load(self, data, max_len=None,binarize_direction='', dummy_label_manipulating='',**kwargs):
+    def load(self, data, max_len=None, binarize_direction='', dummy_label_manipulating='', **kwargs):
         """
         Args:
             data (list[list] or str):
@@ -1283,7 +1292,7 @@ class SPMRL_Tree(Transform):
             if len(tree) == 1 and not isinstance(tree[0][0], nltk.Tree):
                 continue
             # sentences.append(SPMRL_TreeSentence(self, tree, binarize_direction,dummy_label_manipulating))
-            sentences.append(SPMRL_TreeSentence(self,tree, binarize_direction,dummy_label_manipulating))
+            sentences.append(SPMRL_TreeSentence(self, tree, binarize_direction, dummy_label_manipulating))
             i += 1
         if max_len is not None:
             sentences = [i for i in sentences if len(i) < max_len]
@@ -1306,7 +1315,7 @@ class SPMRL_TreeSentence(Sentence):
         # the values contain words, pos tags, raw trees, and spans
         # the tree is first left-binarized before factorized
         # spans are the factorization of tree traversed in pre-order
-        if len(tree)>1:
+        if len(tree) > 1:
             self.values = [*zip(*tree.pos()),
                            tree,
                            SPMRL_Tree.factorize(SPMRL_Tree.binarize(tree, binarize_direction=binarize_direction,
@@ -1316,13 +1325,16 @@ class SPMRL_TreeSentence(Sentence):
         else:
             self.values = [*zip(*tree.pos()),
                            tree,
-                           SPMRL_Tree.factorize(SPMRL_Tree.binarize(tree,binarize_direction=binarize_direction,
-                                    dummy_label_manipulating=dummy_label_manipulating)[0]),
-                           SPMRL_Tree.parsingorder_dfs(SPMRL_Tree.binarize(tree,binarize_direction=binarize_direction,
-                                    dummy_label_manipulating=dummy_label_manipulating)[0])]
+                           SPMRL_Tree.factorize(SPMRL_Tree.binarize(tree, binarize_direction=binarize_direction,
+                                                                    dummy_label_manipulating=dummy_label_manipulating)[
+                                                    0]),
+                           SPMRL_Tree.parsingorder_dfs(SPMRL_Tree.binarize(tree, binarize_direction=binarize_direction,
+                                                                           dummy_label_manipulating=dummy_label_manipulating)[
+                                                           0])]
 
     def __repr__(self):
         return self.values[-3].pformat(1000000)
+
 
 class TreeZh(Transform):
     """
@@ -1349,7 +1361,7 @@ class TreeZh(Transform):
         self.POS = POS
         self.TREE = TREE
         self.CHART = CHART
-        self.PARSINGORDER =PARSINGORDER
+        self.PARSINGORDER = PARSINGORDER
 
     @property
     def src(self):
@@ -1435,7 +1447,7 @@ class TreeZh(Transform):
         return tree
 
     @classmethod
-    def parsingorder_dfs(cls,tree, delete_labels=None, equal_labels=None):
+    def parsingorder_dfs(cls, tree, delete_labels=None, equal_labels=None):
         def track(tree, i):
             label = tree.label()
             if delete_labels is not None and label in delete_labels:
@@ -1504,7 +1516,7 @@ class TreeZh(Transform):
             if equal_labels is not None:
                 label = equal_labels.get(label, label)
             if len(tree) == 1 and not isinstance(tree[0], nltk.Tree):
-                return (i+1 if label is not None else i), []
+                return (i + 1 if label is not None else i), []
             j, spans = i, []
             for child in tree:
                 j, s = track(child, j)
@@ -1512,6 +1524,7 @@ class TreeZh(Transform):
             if label is not None and j > i:
                 spans = [(i, j, label)] + spans
             return j, spans
+
         return track(tree, 0)[1]
 
     @classmethod
@@ -1549,7 +1562,7 @@ class TreeZh(Transform):
 
         def track(node):
             i, j, label = next(node)
-            if j == i+1:
+            if j == i + 1:
                 children = [leaves[i]]
             else:
                 children = track(node) + track(node)
@@ -1560,6 +1573,7 @@ class TreeZh(Transform):
             for label in reversed(labels[:-1]):
                 tree = nltk.Tree(label, [tree])
             return [tree]
+
         return nltk.Tree(root, track(iter(sequence)))
 
     def load(self, data, max_len=None, **kwargs):
@@ -1616,6 +1630,24 @@ class TreeZhSentence(Sentence):
     def __repr__(self):
         return self.values[-3].pformat(1000000)
 
+
+def collect_edus(docs_structure):
+    edus_id = []
+    for entry in docs_structure:
+        if entry:
+            left, right = entry.split(',')
+            left = left.replace('(', '').split(':')
+            du1, du2 = left[0], left[2]
+            if du1 == du2:
+                edus_id.append(int(du1))
+
+            right = right.replace(')', '').split(':')
+            du1, du2 = right[0], right[2]
+            if du1 == du2:
+                edus_id.append(int(du1))
+    return edus_id
+
+
 class DiscourseTreeDoc(Transform):
     """
     The Tree object factorize a constituency tree into four fields, each associated with one or more Field objects.
@@ -1632,7 +1664,7 @@ class DiscourseTreeDoc(Transform):
     """
 
     root = ''
-    fields = ['WORD', 'EDU_BREAK','GOLD_METRIC', 'CHART', 'PARSINGORDER']
+    fields = ['WORD', 'EDU_BREAK', 'GOLD_METRIC', 'CHART', 'PARSINGORDER']
 
     def __init__(self, WORD=None, EDU_BREAK=None, GOLD_METRIC=None, CHART=None, PARSINGORDER=None):
         super().__init__()
@@ -1641,7 +1673,7 @@ class DiscourseTreeDoc(Transform):
         self.EDU_BREAK = EDU_BREAK
         self.GOLD_METRIC = GOLD_METRIC
         self.CHART = CHART
-        self.PARSINGORDER =PARSINGORDER
+        self.PARSINGORDER = PARSINGORDER
 
     @property
     def src(self):
@@ -1652,7 +1684,7 @@ class DiscourseTreeDoc(Transform):
         return self.CHART, self.PARSINGORDER
 
     @classmethod
-    def edu2token(cls,golden_metric_edu, edu_break):
+    def edu2token(cls, golden_metric_edu, edu_break):
         # stack = [(0,len(parsing_order))]
         # NOTE
         # This part to generate parsing order and parsing label in term of edu
@@ -1667,23 +1699,28 @@ class DiscourseTreeDoc(Transform):
             parsing_order_edu = []
             parsing_label = []
             golden_metric_edu_split = re.split(' ', golden_metric_edu)
-            assert (len(golden_metric_edu_split) == len(edu_break) - 1), f"something wrong {len(golden_metric_edu_split)}:{len(edu_break) - 1}"
+            #             assert (len(golden_metric_edu_split) == len(edu_break) - 1), f"something wrong {len(golden_metric_edu_split)}:{len(edu_break) - 1}"
             rootsplit = None
-            for each_split in golden_metric_edu_split:
-                left_start, Nuclearity_left, Relation_left, left_end, \
-                right_start, Nuclearity_right, Relation_right, right_end = re.split(':|=|,', each_split[1:-1])
-                left_start = int(left_start) - 1
-                left_end = int(left_end) - 1
-                right_start = int(right_start) - 1
-                right_end = int(right_end) - 1
-                relation_label = RelationAndNucleus2Label(Nuclearity_left,
-                                                               Nuclearity_right,
-                                                               Relation_left,
-                                                               Relation_right)
-                parsing_order_edu.append((left_start, left_end, right_start, right_end))
-                if left_start == 0 and right_end == len(edu_break) - 1:
-                    rootsplit = deepcopy((left_start, left_end, right_start, right_end))
-                parsing_label.append(relation_label)
+
+            edus_numbers = collect_edus(golden_metric_edu_split)
+            if edus_numbers:
+                maximum_edu = max(edus_numbers)
+                for each_split in golden_metric_edu_split:
+                    if each_split:
+                        left_start, Nuclearity_left, Relation_left, left_end, \
+                        right_start, Nuclearity_right, Relation_right, right_end = re.split('[:|=|,]', each_split[1:-1])
+                        left_start = int(left_start) - 1
+                        left_end = int(left_end) - 1
+                        right_start = int(right_start) - 1
+                        right_end = int(right_end) - 1
+                        relation_label = RelationAndNucleus2Label(Nuclearity_left,
+                                                                  Nuclearity_right,
+                                                                  Relation_left,
+                                                                  Relation_right)
+                        parsing_order_edu.append((left_start, left_end, right_start, right_end))
+                        if left_start == 0 and right_end == maximum_edu - 1:
+                            rootsplit = deepcopy((left_start, left_end, right_start, right_end))
+                        parsing_label.append(relation_label)
 
             # Now we add to the parsing edu the part that corresponding to edu detection component
             # (or when the case all the values)
@@ -1705,7 +1742,8 @@ class DiscourseTreeDoc(Transform):
                 elif stack_head[0] == stack_head[1]:
                     stack_top = (stack_head[0], stack_head[0], stack_head[0], stack_head[0])
                     stack_down = [x for x in parsing_order_edu if x[0] == stack_head[2] and x[3] == stack_head[3]]
-                    assert len(stack_down) == 1, f"something wrong, \n{golden_metric_edu}, \n{edu_break}, \n{stack_down}"
+                    assert len(
+                        stack_down) == 1, f"something wrong, \n{golden_metric_edu}, \n{edu_break}, \n{stack_down}"
                     stack_down = stack_down[0]
                     del stacks[-1]
                     stacks.append(stack_down)
@@ -1744,12 +1782,12 @@ class DiscourseTreeDoc(Transform):
             for x in parsing_order_self_pointing_edu:
                 if x[0] == x[1] == x[2] == x[3]:
                     start_point = edu_span[x[0]][0]
-                    end_point = edu_span[x[0]][1]+1
+                    end_point = edu_span[x[0]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, end_point, end_point))
                 else:
                     start_point = edu_span[x[0]][0]
                     split_point = edu_span[x[2]][0]
-                    end_point = edu_span[x[3]][1]+1
+                    end_point = edu_span[x[3]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, split_point, end_point))
             parsing_order_token = []
             # print(len(parsing_order_edu))
@@ -1758,7 +1796,7 @@ class DiscourseTreeDoc(Transform):
             for i, x in enumerate(parsing_order_edu):
                 start_point = edu_span[x[0]][0]
                 split_point = edu_span[x[2]][0]
-                end_point = edu_span[x[3]][1]+1
+                end_point = edu_span[x[3]][1] + 1
                 parsing_order_token.append((start_point, split_point, end_point, parsing_label[i]))
             # parsing_order_token = []
             # for x in parsing_order_edu:
@@ -1771,7 +1809,7 @@ class DiscourseTreeDoc(Transform):
             # parsing_order_self_pointing_edu = [(0, 0, 0, 0)]
             # edu_span = [(0, edu_break[0])]
             # parsing_order_edu = []
-            parsing_order_self_pointing_token = [(0, edu_break[0]+1, edu_break[0]+1)]
+            parsing_order_self_pointing_token = [(0, edu_break[0] + 1, edu_break[0] + 1)]
             parsing_order_token = []
             # parsing_label_self_pointing = ['None']
             # parsing_label = ['None']
@@ -1802,15 +1840,15 @@ class DiscourseTreeDoc(Transform):
             (0:Nucleus=Joint:11,12:Nucleus=Joint:23)
             (12:Satellite=Attribution:15,16:Nucleus=span:23)'
         """
-        if len(sequence)==0:
+        if len(sequence) == 0:
             return 'NONE'
         else:
-            result=[]
+            result = []
             for (i, k, j, label) in sequence:
                 if k < j:
-                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right\
-                        =Label2RelationAndNucleus(label)
-                    node=f'({i}:{Nuclearity_left}={Relation_left}:{k-1},{k}:{Nuclearity_right}={Relation_right}:{j-1})'
+                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right \
+                        = Label2RelationAndNucleus(label)
+                    node = f'({i}:{Nuclearity_left}={Relation_left}:{k - 1},{k}:{Nuclearity_right}={Relation_right}:{j - 1})'
                 result.append(node)
             return ' '.join(result)
 
@@ -1839,7 +1877,7 @@ class DiscourseTreeDoc(Transform):
 			(0:Nucleus=Joint:11,12:Nucleus=Joint:23)
 			(12:Satellite=Attribution:15,16:Nucleus=span:23)'
 		"""
-        if gold_metric_edu=='NONE':
+        if gold_metric_edu == 'NONE':
             return 'NONE'
         else:
             edu_span = []
@@ -1849,14 +1887,14 @@ class DiscourseTreeDoc(Transform):
                 elif i < len(edu_break):
                     edu_span.append((edu_break[i - 1] + 1, edu_break[i]))
             result = []
-            golden_metric_edu_split=re.split(' ',gold_metric_edu)
+            golden_metric_edu_split = re.split(' ', gold_metric_edu)
             for each_split in golden_metric_edu_split:
                 left_start, Nuclearity_left, Relation_left, left_end, \
                 right_start, Nuclearity_right, Relation_right, right_end = re.split(':|=|,', each_split[1:-1])
-                left_start=int(left_start)-1
-                left_end=int(left_end)-1
-                right_start=int(right_start)-1
-                right_end=int(right_end)-1
+                left_start = int(left_start) - 1
+                left_end = int(left_end) - 1
+                right_start = int(right_start) - 1
+                right_end = int(right_end) - 1
                 node = f'({edu_span[left_start][0]}:{Nuclearity_left}={Relation_left}:{edu_span[left_end][1]},{edu_span[right_start][0]}:{Nuclearity_right}={Relation_right}:{edu_span[right_end][1]})'
                 result.append(node)
             return ' '.join(result)
@@ -1886,7 +1924,6 @@ class DiscourseTreeDoc(Transform):
         edu_break = data_dict['EduBreak_TokenLevel']
         golden_metric = data_dict['Docs_structure']
 
-
         i, sentences = 0, []
         for sent in progress_bar(sents, leave=False):
             # if len(tree) == 1 and not isinstance(tree[0][0], nltk.Tree):
@@ -1897,6 +1934,7 @@ class DiscourseTreeDoc(Transform):
             sentences = [i for i in sentences if len(i) < max_len]
 
         return sentences
+
 
 class DiscourseTreeDocToken(Sentence):
     """
@@ -1916,10 +1954,11 @@ class DiscourseTreeDocToken(Sentence):
         self.values = [sent,
                        edu_break,
                        golden_metric,
-                       *DiscourseTreeDoc.edu2token(golden_metric_edu=golden_metric,edu_break=edu_break)]
+                       *DiscourseTreeDoc.edu2token(golden_metric_edu=golden_metric, edu_break=edu_break)]
 
     def __repr__(self):
         return self.values[-2].pformat(1000000)
+
 
 class DiscourseTreeDocSentinfo(Transform):
     """
@@ -1937,9 +1976,10 @@ class DiscourseTreeDocSentinfo(Transform):
     """
 
     root = ''
-    fields = ['WORD', 'ORIGINAL_EDU_BREAK', 'GOLD_METRIC' , 'SENT_BREAK', 'EDU_BREAK', 'CHART', 'GOLDPARSINGORDER', 'PARSINGORDER']
+    fields = ['WORD', 'ORIGINAL_EDU_BREAK', 'GOLD_METRIC', 'SENT_BREAK', 'EDU_BREAK', 'CHART', 'GOLDPARSINGORDER',
+              'PARSINGORDER']
 
-    def __init__(self, WORD=None, ORIGINAL_EDU_BREAK = None, GOLD_METRIC=None,
+    def __init__(self, WORD=None, ORIGINAL_EDU_BREAK=None, GOLD_METRIC=None,
                  SENT_BREAK=None, EDU_BREAK=None, CHART=None, GOLDPARSINGORDER=None, PARSINGORDER=None):
         super().__init__()
 
@@ -1950,8 +1990,7 @@ class DiscourseTreeDocSentinfo(Transform):
         self.GOLD_METRIC = GOLD_METRIC
         self.CHART = CHART
         self.GOLDPARSINGORDER = GOLDPARSINGORDER
-        self.PARSINGORDER =PARSINGORDER
-
+        self.PARSINGORDER = PARSINGORDER
 
     @property
     def src(self):
@@ -1962,7 +2001,7 @@ class DiscourseTreeDocSentinfo(Transform):
         return self.CHART, self.PARSINGORDER, self.GOLDPARSINGORDER
 
     @classmethod
-    def edu2token(cls,golden_metric_edu, edu_break, sent_break):
+    def edu2token(cls, golden_metric_edu, edu_break, sent_break):
         # stack = [(0,len(parsing_order))]
         # NOTE
         # This part to generate parsing order and parsing label in term of edu
@@ -1974,7 +2013,8 @@ class DiscourseTreeDocSentinfo(Transform):
             parsing_order_edu = []
             parsing_label = []
             golden_metric_edu_split = re.split(' ', golden_metric_edu)
-            assert (len(golden_metric_edu_split) == len(edu_break) - 1), f"something wrong {len(golden_metric_edu_split)}:{len(edu_break) - 1}"
+            assert (len(golden_metric_edu_split) == len(
+                edu_break) - 1), f"something wrong {len(golden_metric_edu_split)}:{len(edu_break) - 1}"
             rootsplit = None
             for each_split in golden_metric_edu_split:
                 left_start, Nuclearity_left, Relation_left, left_end, \
@@ -1984,9 +2024,9 @@ class DiscourseTreeDocSentinfo(Transform):
                 right_start = int(right_start) - 1
                 right_end = int(right_end) - 1
                 relation_label = RelationAndNucleus2Label(Nuclearity_left,
-                                                               Nuclearity_right,
-                                                               Relation_left,
-                                                               Relation_right)
+                                                          Nuclearity_right,
+                                                          Relation_left,
+                                                          Relation_right)
                 parsing_order_edu.append((left_start, left_end, right_start, right_end))
                 if left_start == 0 and right_end == len(edu_break) - 1:
                     rootsplit = deepcopy((left_start, left_end, right_start, right_end))
@@ -2012,7 +2052,8 @@ class DiscourseTreeDocSentinfo(Transform):
                 elif stack_head[0] == stack_head[1]:
                     stack_top = (stack_head[0], stack_head[0], stack_head[0], stack_head[0])
                     stack_down = [x for x in parsing_order_edu if x[0] == stack_head[2] and x[3] == stack_head[3]]
-                    assert len(stack_down) == 1, f"something wrong, \n{golden_metric_edu}, \n{edu_break}, \n{stack_down}"
+                    assert len(
+                        stack_down) == 1, f"something wrong, \n{golden_metric_edu}, \n{edu_break}, \n{stack_down}"
                     stack_down = stack_down[0]
                     del stacks[-1]
                     stacks.append(stack_down)
@@ -2052,12 +2093,12 @@ class DiscourseTreeDocSentinfo(Transform):
             for x in parsing_order_self_pointing_edu:
                 if x[0] == x[1] == x[2] == x[3]:
                     start_point = edu_span[x[0]][0]
-                    end_point = edu_span[x[0]][1]+1
+                    end_point = edu_span[x[0]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, end_point, end_point))
                 else:
                     start_point = edu_span[x[0]][0]
                     split_point = edu_span[x[2]][0]
-                    end_point = edu_span[x[3]][1]+1
+                    end_point = edu_span[x[3]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, split_point, end_point))
                     parsing_order_gold_pointing_token.append((start_point, split_point, end_point))
             parsing_order_token = []
@@ -2067,10 +2108,10 @@ class DiscourseTreeDocSentinfo(Transform):
             for i, x in enumerate(parsing_order_edu):
                 start_point = edu_span[x[0]][0]
                 split_point = edu_span[x[2]][0]
-                end_point = edu_span[x[3]][1]+1
+                end_point = edu_span[x[3]][1] + 1
                 parsing_order_token.append((start_point, split_point, end_point, parsing_label[i]))
-            boundary_edu_break=[x+1 for x in edu_break]
-            boundary_sent_break=[x+1 for x in sent_break]
+            boundary_edu_break = [x + 1 for x in edu_break]
+            boundary_sent_break = [x + 1 for x in sent_break]
             # parsing_order_token = []
             # for x in parsing_order_edu:
             #     start_leftspan = edu_span[x[0]][0]
@@ -2083,10 +2124,10 @@ class DiscourseTreeDocSentinfo(Transform):
             # edu_span = [(0, edu_break[0])]
             # parsing_order_edu = []
             parsing_order_gold_pointing_token = []
-            parsing_order_self_pointing_token = [(0, edu_break[0]+1, edu_break[0]+1)]
+            parsing_order_self_pointing_token = [(0, edu_break[0] + 1, edu_break[0] + 1)]
             parsing_order_token = []
-            boundary_edu_break=[edu_break[0]+1]
-            boundary_sent_break=[sent_break[0]+1]
+            boundary_edu_break = [edu_break[0] + 1]
+            boundary_sent_break = [sent_break[0] + 1]
             # parsing_label_self_pointing = ['None']
             # parsing_label = ['None']
         return boundary_sent_break, boundary_edu_break, parsing_order_token, parsing_order_gold_pointing_token, parsing_order_self_pointing_token
@@ -2116,15 +2157,15 @@ class DiscourseTreeDocSentinfo(Transform):
             (0:Nucleus=Joint:11,12:Nucleus=Joint:23)
             (12:Satellite=Attribution:15,16:Nucleus=span:23)'
         """
-        if len(sequence)==0:
+        if len(sequence) == 0:
             return 'NONE'
         else:
-            result=[]
+            result = []
             for (i, k, j, label) in sequence:
                 if k < j:
-                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right\
-                        =Label2RelationAndNucleus(label)
-                    node=f'({i}:{Nuclearity_left}={Relation_left}:{k-1},{k}:{Nuclearity_right}={Relation_right}:{j-1})'
+                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right \
+                        = Label2RelationAndNucleus(label)
+                    node = f'({i}:{Nuclearity_left}={Relation_left}:{k - 1},{k}:{Nuclearity_right}={Relation_right}:{j - 1})'
                 result.append(node)
             return ' '.join(result)
 
@@ -2153,7 +2194,7 @@ class DiscourseTreeDocSentinfo(Transform):
 			(0:Nucleus=Joint:11,12:Nucleus=Joint:23)
 			(12:Satellite=Attribution:15,16:Nucleus=span:23)'
 		"""
-        if gold_metric_edu=='NONE':
+        if gold_metric_edu == 'NONE':
             return 'NONE'
         else:
             edu_span = []
@@ -2163,14 +2204,14 @@ class DiscourseTreeDocSentinfo(Transform):
                 elif i < len(edu_break):
                     edu_span.append((edu_break[i - 1] + 1, edu_break[i]))
             result = []
-            golden_metric_edu_split=re.split(' ',gold_metric_edu)
+            golden_metric_edu_split = re.split(' ', gold_metric_edu)
             for each_split in golden_metric_edu_split:
                 left_start, Nuclearity_left, Relation_left, left_end, \
                 right_start, Nuclearity_right, Relation_right, right_end = re.split(':|=|,', each_split[1:-1])
-                left_start=int(left_start)-1
-                left_end=int(left_end)-1
-                right_start=int(right_start)-1
-                right_end=int(right_end)-1
+                left_start = int(left_start) - 1
+                left_end = int(left_end) - 1
+                right_start = int(right_start) - 1
+                right_end = int(right_end) - 1
                 node = f'({edu_span[left_start][0]}:{Nuclearity_left}={Relation_left}:{edu_span[left_end][1]},{edu_span[right_start][0]}:{Nuclearity_right}={Relation_right}:{edu_span[right_end][1]})'
                 result.append(node)
             return ' '.join(result)
@@ -2198,20 +2239,21 @@ class DiscourseTreeDocSentinfo(Transform):
         data_dict = pickle.load(open(data, "rb"))
         sents = data_dict['InputDocs']
         edu_break = data_dict['EduBreak_TokenLevel']
-        sent_break= data_dict['SentBreak']
+        sent_break = data_dict['SentBreak']
         golden_metric = data_dict['Docs_structure']
-
 
         i, sentences = 0, []
         for sent in progress_bar(sents, leave=False):
             # if len(tree) == 1 and not isinstance(tree[0][0], nltk.Tree):
             #     continue
-            sentences.append(DiscourseTreeDocSentInfoToken(self, sent, sent_break[i], edu_break[i], ' '.join(golden_metric[i])))
+            sentences.append(
+                DiscourseTreeDocSentInfoToken(self, sent, sent_break[i], edu_break[i], ' '.join(golden_metric[i])))
             i += 1
         if max_len is not None:
             sentences = [i for i in sentences if len(i) < max_len]
 
         return sentences
+
 
 class DiscourseTreeDocSentInfoToken(Sentence):
     """
@@ -2231,10 +2273,12 @@ class DiscourseTreeDocSentInfoToken(Sentence):
         self.values = [sent,
                        edu_break,
                        golden_metric,
-                       *DiscourseTreeDocSentinfo.edu2token(golden_metric_edu=golden_metric,edu_break=edu_break, sent_break=sent_break)]
+                       *DiscourseTreeDocSentinfo.edu2token(golden_metric_edu=golden_metric, edu_break=edu_break,
+                                                           sent_break=sent_break)]
 
     def __repr__(self):
         return self.values[-3].pformat(1000000)
+
 
 class DiscourseTreeDocEduGold(Transform):
     """
@@ -2270,15 +2314,15 @@ class DiscourseTreeDocEduGold(Transform):
     """
 
     root = ''
-    fields = ['WORD', 'ORIGINAL_EDU_BREAK', 'GOLD_METRIC' ,
+    fields = ['WORD', 'ORIGINAL_EDU_BREAK', 'GOLD_METRIC',
               'SENT_BREAK', 'EDU_BREAK',
               'PARSING_LABEL_TOKEN', 'PARSING_LABEL_EDU',
               'PARSING_ORDER_EDU', 'PARSING_ORDER_TOKEN', 'PARSING_ORDER_SELF_POINTING_TOKEN'
               ]
 
-    def __init__(self, WORD=None, ORIGINAL_EDU_BREAK = None, GOLD_METRIC=None,
+    def __init__(self, WORD=None, ORIGINAL_EDU_BREAK=None, GOLD_METRIC=None,
                  SENT_BREAK=None, EDU_BREAK=None,
-                 PARSING_LABEL_TOKEN= None, PARSING_LABEL_EDU=None,
+                 PARSING_LABEL_TOKEN=None, PARSING_LABEL_EDU=None,
                  PARSING_ORDER_EDU=None, PARSING_ORDER_TOKEN=None,
                  PARSING_ORDER_SELF_POINTING_TOKEN=None
                  ):
@@ -2295,8 +2339,8 @@ class DiscourseTreeDocEduGold(Transform):
         self.PARSING_LABEL_EDU = PARSING_LABEL_EDU
 
         self.PARSING_ORDER_EDU = PARSING_ORDER_EDU
-        self.PARSING_ORDER_TOKEN=PARSING_ORDER_TOKEN
-        self.PARSING_ORDER_SELF_POINTING_TOKEN=PARSING_ORDER_SELF_POINTING_TOKEN
+        self.PARSING_ORDER_TOKEN = PARSING_ORDER_TOKEN
+        self.PARSING_ORDER_SELF_POINTING_TOKEN = PARSING_ORDER_SELF_POINTING_TOKEN
 
     @property
     def src(self):
@@ -2308,13 +2352,14 @@ class DiscourseTreeDocEduGold(Transform):
 
     @classmethod
     def edu2token(cls, golden_metric_edu, edu_break, sent_break):
-        #This is to convert from raw data to computatonal data
+        # This is to convert from raw data to computatonal data
 
         if not (golden_metric_edu == 'NONE'):
             parsing_order_edu = []
             parsing_label = []
             golden_metric_edu_split = re.split(' ', golden_metric_edu)
-            assert (len(golden_metric_edu_split) == len(edu_break) - 1), f"something wrong {len(golden_metric_edu_split)}:{len(edu_break) - 1}"
+            assert (len(golden_metric_edu_split) == len(
+                edu_break) - 1), f"something wrong {len(golden_metric_edu_split)}:{len(edu_break) - 1}"
             rootsplit = None
             for each_split in golden_metric_edu_split:
                 left_start, Nuclearity_left, Relation_left, left_end, \
@@ -2324,9 +2369,9 @@ class DiscourseTreeDocEduGold(Transform):
                 right_start = int(right_start) - 1
                 right_end = int(right_end) - 1
                 relation_label = RelationAndNucleus2Label(Nuclearity_left,
-                                                               Nuclearity_right,
-                                                               Relation_left,
-                                                               Relation_right)
+                                                          Nuclearity_right,
+                                                          Relation_left,
+                                                          Relation_right)
                 parsing_order_edu.append((left_start, left_end, right_start, right_end))
                 if left_start == 0 and right_end == len(edu_break) - 1:
                     rootsplit = deepcopy((left_start, left_end, right_start, right_end))
@@ -2352,7 +2397,8 @@ class DiscourseTreeDocEduGold(Transform):
                 elif stack_head[0] == stack_head[1]:
                     stack_top = (stack_head[0], stack_head[0], stack_head[0], stack_head[0])
                     stack_down = [x for x in parsing_order_edu if x[0] == stack_head[2] and x[3] == stack_head[3]]
-                    assert len(stack_down) == 1, f"something wrong, \n{golden_metric_edu}, \n{edu_break}, \n{stack_down}"
+                    assert len(
+                        stack_down) == 1, f"something wrong, \n{golden_metric_edu}, \n{edu_break}, \n{stack_down}"
                     stack_down = stack_down[0]
                     del stacks[-1]
                     stacks.append(stack_down)
@@ -2393,15 +2439,15 @@ class DiscourseTreeDocEduGold(Transform):
             for x in parsing_order_self_pointing_edu:
                 if x[0] == x[1] == x[2] == x[3]:
                     start_point = edu_span[x[0]][0]
-                    end_point = edu_span[x[0]][1]+1
+                    end_point = edu_span[x[0]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, end_point, end_point))
                 else:
                     start_point = edu_span[x[0]][0]
                     split_point = edu_span[x[2]][0]
-                    end_point = edu_span[x[3]][1]+1
+                    end_point = edu_span[x[3]][1] + 1
                     parsing_order_self_pointing_token.append((start_point, split_point, end_point))
                     parsing_order_token.append((start_point, split_point, end_point))
-                    parsing_order_edu_boundary.append((x[0], x[2], x[3]+1))
+                    parsing_order_edu_boundary.append((x[0], x[2], x[3] + 1))
             parsing_label_token = []
             parsing_label_edu = []
             # print(len(parsing_order_edu))
@@ -2410,11 +2456,11 @@ class DiscourseTreeDocEduGold(Transform):
             for i, x in enumerate(parsing_order_edu):
                 start_point = edu_span[x[0]][0]
                 split_point = edu_span[x[2]][0]
-                end_point = edu_span[x[3]][1]+1
+                end_point = edu_span[x[3]][1] + 1
                 parsing_label_token.append((start_point, split_point, end_point, parsing_label[i]))
-                parsing_label_edu.append((x[0], x[2], x[3]+1, parsing_label[i]))
-            boundary_edu_break=[x+1 for x in edu_break]
-            boundary_sent_break=[x+1 for x in sent_break]
+                parsing_label_edu.append((x[0], x[2], x[3] + 1, parsing_label[i]))
+            boundary_edu_break = [x + 1 for x in edu_break]
+            boundary_sent_break = [x + 1 for x in sent_break]
             # parsing_order_token = []
             # for x in parsing_order_edu:
             #     start_leftspan = edu_span[x[0]][0]
@@ -2428,14 +2474,14 @@ class DiscourseTreeDocEduGold(Transform):
             # parsing_order_edu = []
             parsing_order_token = []
             parsing_order_edu_boundary = []
-            parsing_order_self_pointing_token = [(0, edu_break[0]+1, edu_break[0]+1)]
+            parsing_order_self_pointing_token = [(0, edu_break[0] + 1, edu_break[0] + 1)]
             parsing_label_token = []
             parsing_label_edu = []
-            boundary_edu_break=[edu_break[0]+1]
-            boundary_sent_break=[sent_break[0]+1]
+            boundary_edu_break = [edu_break[0] + 1]
+            boundary_sent_break = [sent_break[0] + 1]
             # parsing_label_self_pointing = ['None']
             # parsing_label = ['None']
-        return boundary_sent_break, boundary_edu_break, parsing_label_token, parsing_label_edu ,\
+        return boundary_sent_break, boundary_edu_break, parsing_label_token, parsing_label_edu, \
                parsing_order_edu_boundary, parsing_order_token, parsing_order_self_pointing_token
 
     @classmethod
@@ -2463,15 +2509,15 @@ class DiscourseTreeDocEduGold(Transform):
             (0:Nucleus=Joint:11,12:Nucleus=Joint:23)
             (12:Satellite=Attribution:15,16:Nucleus=span:23)'
         """
-        if len(sequence)==0:
+        if len(sequence) == 0:
             return 'NONE'
         else:
-            result=[]
+            result = []
             for (i, k, j, label) in sequence:
                 if k < j:
-                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right\
-                        =Label2RelationAndNucleus(label)
-                    node=f'({i}:{Nuclearity_left}={Relation_left}:{k-1},{k}:{Nuclearity_right}={Relation_right}:{j-1})'
+                    Nuclearity_left, Nuclearity_right, Relation_left, Relation_right \
+                        = Label2RelationAndNucleus(label)
+                    node = f'({i}:{Nuclearity_left}={Relation_left}:{k - 1},{k}:{Nuclearity_right}={Relation_right}:{j - 1})'
                 result.append(node)
             return ' '.join(result)
 
@@ -2500,7 +2546,7 @@ class DiscourseTreeDocEduGold(Transform):
 			(0:Nucleus=Joint:11,12:Nucleus=Joint:23)
 			(12:Satellite=Attribution:15,16:Nucleus=span:23)'
 		"""
-        if gold_metric_edu=='NONE':
+        if gold_metric_edu == 'NONE':
             return 'NONE'
         else:
             edu_span = []
@@ -2510,14 +2556,14 @@ class DiscourseTreeDocEduGold(Transform):
                 elif i < len(edu_break):
                     edu_span.append((edu_break[i - 1] + 1, edu_break[i]))
             result = []
-            golden_metric_edu_split=re.split(' ',gold_metric_edu)
+            golden_metric_edu_split = re.split(' ', gold_metric_edu)
             for each_split in golden_metric_edu_split:
                 left_start, Nuclearity_left, Relation_left, left_end, \
                 right_start, Nuclearity_right, Relation_right, right_end = re.split(':|=|,', each_split[1:-1])
-                left_start=int(left_start)-1
-                left_end=int(left_end)-1
-                right_start=int(right_start)-1
-                right_end=int(right_end)-1
+                left_start = int(left_start) - 1
+                left_end = int(left_end) - 1
+                right_start = int(right_start) - 1
+                right_end = int(right_end) - 1
                 node = f'({edu_span[left_start][0]}:{Nuclearity_left}={Relation_left}:{edu_span[left_end][1]},{edu_span[right_start][0]}:{Nuclearity_right}={Relation_right}:{edu_span[right_end][1]})'
                 result.append(node)
             return ' '.join(result)
@@ -2545,20 +2591,21 @@ class DiscourseTreeDocEduGold(Transform):
         data_dict = pickle.load(open(data, "rb"))
         sents = data_dict['InputDocs']
         edu_break = data_dict['EduBreak_TokenLevel']
-        sent_break= data_dict['SentBreak']
+        sent_break = data_dict['SentBreak']
         golden_metric = data_dict['Docs_structure']
-
 
         i, sentences = 0, []
         for sent in progress_bar(sents, leave=False):
             # if len(tree) == 1 and not isinstance(tree[0][0], nltk.Tree):
             #     continue
-            sentences.append(DiscourseTreeDocEduGoldSentence(self, sent, sent_break[i], edu_break[i], ' '.join(golden_metric[i])))
+            sentences.append(
+                DiscourseTreeDocEduGoldSentence(self, sent, sent_break[i], edu_break[i], ' '.join(golden_metric[i])))
             i += 1
         if max_len is not None:
             sentences = [i for i in sentences if len(i) < max_len]
 
         return sentences
+
 
 class DiscourseTreeDocEduGoldSentence(Sentence):
     """
@@ -2578,7 +2625,8 @@ class DiscourseTreeDocEduGoldSentence(Sentence):
         self.values = [sent,
                        edu_break,
                        golden_metric,
-                       *DiscourseTreeDocEduGold.edu2token(golden_metric_edu=golden_metric,edu_break=edu_break, sent_break=sent_break)]
+                       *DiscourseTreeDocEduGold.edu2token(golden_metric_edu=golden_metric, edu_break=edu_break,
+                                                          sent_break=sent_break)]
 
     def __repr__(self):
         return self.values[-5].pformat(1000000)

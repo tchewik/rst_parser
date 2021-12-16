@@ -13,13 +13,13 @@ def parse(parser):
                         help='path to model file')
     parser.add_argument('--predict_output_path', default=None,
                         help='path to model file')
-    parser.add_argument('--device', '-d', default='-1',
+    parser.add_argument('--device', '-d', default='1',
                         help='ID of GPU to use')
     parser.add_argument('--seed', '-s', default=1, type=int,
                         help='seed for generating random numbers')
     parser.add_argument('--threads', '-t', default=16, type=int,
                         help='max num of threads')
-    parser.add_argument('--batch-size', default=5000, type=int,
+    parser.add_argument('--batch-size', default=512, type=int,
                         help='batch size')
     args, unknown = parser.parse_known_args()
     args, _ = parser.parse_known_args(unknown, args)

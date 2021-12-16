@@ -16,14 +16,13 @@ elif os.path.exists(data_path_pc):
 	DATA_PATH=data_path_pc
 else:
 	DATA_PATH=data_path_ntu2
-RelationTable = ['Attribution_SN', 'Enablement_NS', 'Cause_SN', 'Cause_NN', 'Temporal_SN',
-                 'Condition_NN', 'Cause_NS', 'Elaboration_NS', 'Background_NS', 'Topic-Comment_SN',
-                 'Elaboration_SN', 'Evaluation_SN', 'Explanation_NN','TextualOrganization_NN', 'Background_SN',
-                 'Contrast_NN', 'Evaluation_NS', 'Topic-Comment_NN', 'Condition_NS', 'Comparison_NS',
-                 'Explanation_SN', 'Contrast_NS', 'Comparison_SN', 'Condition_SN', 'Summary_SN',
-                 'Explanation_NS', 'Enablement_SN', 'Temporal_NN', 'Temporal_NS', 'Topic-Comment_NS',
-                 'Manner-Means_NS', 'Same-Unit_NN', 'Summary_NS', 'Contrast_SN', 'Attribution_NS',
-                 'Manner-Means_SN', 'Joint_NN', 'Comparison_NN', 'Evaluation_NN']
+RelationTable = ['attribution_NS', 'attribution_SN', 'background_NS',
+       'cause-effect_NS', 'cause-effect_SN',
+       'comparison_NN', 'concession_NS', 'condition_NS', 'condition_SN',
+       'contrast_NN', 'elaboration_NS', 'evidence_NS',
+       'interpretation-evaluation_NS', 'interpretation-evaluation_SN',
+       'joint_NN', 'preparation_SN', 'purpose_NS', 'purpose_SN',
+       'restatement_NN', 'same-unit_NN', 'sequence_NN', 'solutionhood_SN']
 
 
 def Label2RelationAndNucleus(relation):
