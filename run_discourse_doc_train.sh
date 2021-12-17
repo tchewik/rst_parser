@@ -7,7 +7,7 @@ export PRETRAINED_EMBEDDING='data/model.txt'
 
 export BATCH_SIZE=10000
 # -d 1   - device number
-python -m src.cmds.pointing_discourse train -b -d 1 -p exp/ptb.pointing.discourse.$FEAT \
+python -m src.cmds.pointing_discourse train -b --buckets 16 --unk 'unknown' -d 1 -p exp/ptb.pointing.discourse.$FEAT \
 --data_path $DATA_PATH -f $FEAT --learning_rate_schedule $LEARNING_RATE_SCHEDULE --batch-size $BATCH_SIZE --conf 'discourse_config.ini' \
 --embed $PRETRAINED_EMBEDDING
 #--n-embed $N_EMBED

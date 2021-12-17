@@ -41,7 +41,8 @@ class PointingDiscourseParser(Parser):
               buckets=32,
               batch_size=5000,
               # lr=8e-4,
-              lr=2e-3,
+              # lr=2e-3,
+              lr=5e-3,
               mu=.9,
               nu=.9,
               epsilon=1e-12,
@@ -60,6 +61,11 @@ class PointingDiscourseParser(Parser):
 
         args = self.args.update(locals())
         init_logger(logger, verbose=args.verbose)
+
+        logger.info('args:')
+        logger.info(f'{vars(args)}')
+        logger.info('kwargs:')
+        logger.info(f'{kwargs}')
 
         self.transform.train()
         if dist.is_initialized():
@@ -375,6 +381,7 @@ class PointingDiscourseParser(Parser):
             'eos_index': WORD.eos_index,
             'feat_pad_index': FEAT.pad_index
         })
+        print('CHART.vocab:', vars(CHART.vocab))
         model = cls.MODEL(**args)
         model.load_pretrained(WORD.embed).to(args.device)
         return cls(args, model, transform)

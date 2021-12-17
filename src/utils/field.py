@@ -3,6 +3,7 @@
 from collections import Counter
 
 import torch
+
 from src.utils.fn import pad
 from src.utils.vocab import Vocab
 
@@ -369,6 +370,7 @@ class ChartField(Field):
     def compose(self, sequences):
         return [pad(i).to(self.device) for i in zip(*sequences)]
 
+
 class ParsingOrderField(Field):
     # self.pad_index
     #
@@ -382,17 +384,18 @@ class ParsingOrderField(Field):
 
     def transform(self, sequences):
         # sequences = [self.preprocess(sequence) for sequence in sequences]
-        pasrsingorder_list=[]
+        pasrsingorder_list = []
         for sequence in sequences:
-            parsingorder=torch.tensor(sequence, dtype=torch.long)
+            parsingorder = torch.tensor(sequence, dtype=torch.long)
             # [seq_len-1, 3] => [3, seq_len-1]
-            if len(sequence)>0:
-                parsingorder = parsingorder.transpose(0,1)
+            if len(sequence) > 0:
+                parsingorder = parsingorder.transpose(0, 1)
             else:
-                parsingorder = parsingorder.new_zeros(3,1)
+                parsingorder = parsingorder.new_zeros(3, 1)
             pasrsingorder_list.append(parsingorder)
 
         return pasrsingorder_list
+
 
 class UnitBreakField(Field):
     # self.pad_index
@@ -407,15 +410,16 @@ class UnitBreakField(Field):
 
     def transform(self, sequences):
         # sequences = [self.preprocess(sequence) for sequence in sequences]
-        unitbreak_list=[]
+        unitbreak_list = []
         for sequence in sequences:
-            unitbreak=torch.tensor(sequence, dtype=torch.long)
+            unitbreak = torch.tensor(sequence, dtype=torch.long)
             # [seq_len-1, 3] => [3, seq_len-1]
-            if len(sequence)==0:
+            if len(sequence) == 0:
                 unitbreak = unitbreak.new_zeros(1)
             unitbreak_list.append(unitbreak)
 
         return unitbreak_list
+
 
 class ChartDiscourseField(Field):
     """
@@ -448,7 +452,7 @@ class ChartDiscourseField(Field):
 
         for sequence in sequences:
             if len(sequence) > 0:
-                split_chart=torch.tensor([seq[:3] for seq in sequence], dtype=torch.long)
+                split_chart = torch.tensor([seq[:3] for seq in sequence], dtype=torch.long)
                 split_chart = split_chart.transpose(0, 1)
                 label_chart = torch.tensor([self.vocab[seq[3]] for seq in sequence], dtype=torch.long)
             else:
@@ -463,6 +467,7 @@ class ChartDiscourseField(Field):
 
     def compose(self, sequences):
         return [pad(i).to(self.device) for i in zip(*sequences)]
+
 
 class SubwordFieldSPMRL(Field):
     """
@@ -523,7 +528,7 @@ class SubwordFieldSPMRL(Field):
         if self.lower:
             sequence = [str.lower(token) for token in sequence]
         if self.fn is None and self.tokenize is None and not self.lower:
-            sequence= preprocess_spmrl(sequence)
+            sequence = preprocess_spmrl(sequence)
         return sequence
 
     def build(self, dataset, min_freq=1, embed=None):
