@@ -41,7 +41,6 @@ class PointingDiscourseParser(Parser):
               buckets=32,
               batch_size=5000,
               # lr=8e-4,
-              # lr=2e-3,
               lr=5e-3,
               mu=.9,
               nu=.9,
@@ -174,6 +173,8 @@ class PointingDiscourseParser(Parser):
         # print(args.predict_output_path)
         # input()
 
+        print(args)
+
         self.transform.eval()
 
         logger.info("Load the data")
@@ -182,6 +183,7 @@ class PointingDiscourseParser(Parser):
         #          'golden_metric': os.path.join(data, "Testing_GoldenLabelforMetric.pickle")}
         dataset = Dataset(self.transform, data)
         dataset.build(args.batch_size, args.buckets)
+
         logger.info(f"\n{dataset}")
 
         logger.info("Make predictions on the dataset")
@@ -334,7 +336,7 @@ class PointingDiscourseParser(Parser):
         args = Config(**locals())
         args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        if os.path.exists(path) and not args.build:
+        if os.path.exists(path):# and not args.build:
             parser = cls.load(**args)
             parser.model = cls.MODEL(**parser.args)
             parser.model.load_pretrained(parser.WORD.embed).to(args.device)

@@ -198,11 +198,24 @@ class Parser(object):
             state = torch.load(path)
 
         args = state['args'].update(args)
-        model = cls.MODEL(**args)
-        model.load_pretrained(state['pretrained'])
-        model.load_state_dict(state['state_dict'], False)
-        model.to(args.device)
+        # model = cls.MODEL(**args)
+        # model.load_pretrained(state['pretrained'])
+        parser = cls.load(**args)
+        parser.model = cls.MODEL(**parser.args)
+        parser.model.load_pretrained(parser.WORD.embed).to(args.device)
+        print(parser.WORD.embed)
+        parser.model.load_state_dict(state['state_dict'], False)
+        parser.model.to(args.device)
+
         transform = state['transform']
+        model = parser.model
+
+        # if os.path.exists(path):  # and not args.build:
+        #     parser = cls.load(**args)
+        #     parser.model = cls.MODEL(**parser.args)
+        #     parser.model.load_pretrained(parser.WORD.embed).to(args.device)
+        #     return parser
+
         return cls(args, model, transform)
 
     def save(self, path):
