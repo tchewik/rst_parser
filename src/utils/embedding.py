@@ -15,7 +15,7 @@ class Embedding(object):
         return len(self.tokens)
 
     def __contains__(self, token):
-        return token in self.pretrained
+        return token.lower() in self.pretrained
 
     @property
     def dim(self):

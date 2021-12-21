@@ -2,14 +2,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.modules import MLP, BertEmbedding, Biaffine, BiLSTM, CharLSTM
-from src.modules.dropout import IndependentDropout, SharedDropout
-from src.modules.treecrf import CRFConstituency
+from src.modules import MLP, Biaffine
 from src.modules.module_fence_rnn import EncoderFenceDiscourseRnn, DecoderRNN
-from src.utils.fn import parsingorder2spandfs
 from src.utils import Config
-from src.utils.alg import cky
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class PointingDiscourseSentinfoModel(nn.Module):
@@ -95,30 +90,30 @@ class PointingDiscourseSentinfoModel(nn.Module):
         self.args = Config().update(locals())
         # the embedding layer
         self.encoder = EncoderFenceDiscourseRnn(n_words=n_words,
-                 n_feats=n_feats,
-                 n_labels=n_labels,
-                 feat=feat,
-                 n_embed=n_embed,
-                 n_feat_embed=n_feat_embed,
-                 n_char_embed=n_char_embed,
-                 bert=bert,
-                 n_bert_layers=n_bert_layers,
-                 mix_dropout=mix_dropout,
-                 embed_dropout=embed_dropout,
-                 n_lstm_hidden=n_lstm_hidden,
-                 n_lstm_layers=n_lstm_layers,
-                 lstm_dropout=lstm_dropout,
-                 n_mlp_span=n_mlp_span,
-                 n_mlp_label=n_mlp_label,
-                 mlp_dropout=mlp_dropout,
-                 feat_pad_index=feat_pad_index,
-                 pad_index=pad_index,
-                 unk_index=unk_index,
-                 **kwargs)
-        self.decoder=DecoderRNN(input_size=n_mlp_span * 2,
-		                        hidden_size=n_lstm_hidden * 2,
-		                        rnn_layers=n_lstm_layers,
-		                        dropout=lstm_dropout)
+                                                n_feats=n_feats,
+                                                n_labels=n_labels,
+                                                feat=feat,
+                                                n_embed=n_embed,
+                                                n_feat_embed=n_feat_embed,
+                                                n_char_embed=n_char_embed,
+                                                bert=bert,
+                                                n_bert_layers=n_bert_layers,
+                                                mix_dropout=mix_dropout,
+                                                embed_dropout=embed_dropout,
+                                                n_lstm_hidden=n_lstm_hidden,
+                                                n_lstm_layers=n_lstm_layers,
+                                                lstm_dropout=lstm_dropout,
+                                                n_mlp_span=n_mlp_span,
+                                                n_mlp_label=n_mlp_label,
+                                                mlp_dropout=mlp_dropout,
+                                                feat_pad_index=feat_pad_index,
+                                                pad_index=pad_index,
+                                                unk_index=unk_index,
+                                                **kwargs)
+        self.decoder = DecoderRNN(input_size=n_mlp_span * 2,
+                                  hidden_size=n_lstm_hidden * 2,
+                                  rnn_layers=n_lstm_layers,
+                                  dropout=lstm_dropout)
         self.mlp_span_l_decoder = MLP(n_in=n_lstm_hidden * 2,
                                       n_out=n_mlp_span,
                                       dropout=mlp_dropout)
@@ -167,7 +162,6 @@ class PointingDiscourseSentinfoModel(nn.Module):
         mask_point = ~(mask_l & mask_r)
         mask_point = mask_point.expand(batch_size, dec_len, seq_len - 1)
 
-
         span_l = fencepost[torch.arange(batch_size).unsqueeze(1), parsing_orders[:, 0, :]]
         span_r = fencepost[torch.arange(batch_size).unsqueeze(1), parsing_orders[:, 2, :]]
         span_l = self.mlp_span_l_decoder(span_l)
@@ -190,29 +184,28 @@ class PointingDiscourseSentinfoModel(nn.Module):
         s_point[s_point != s_point] = 0
 
         # label mask
-        _, _, span_len=spans.shape
-        mask_span=torch.eye(span_len,span_len, dtype=torch.bool).to(spans.device)
+        _, _, span_len = spans.shape
+        mask_span = torch.eye(span_len, span_len, dtype=torch.bool).to(spans.device)
         label_lens = labels.ne(self.args.pad_index).sum(1)
-
 
         l_lelf_point = fencepost[torch.arange(batch_size).unsqueeze(1), spans[:, 0, :]]
         l_split_point = fencepost[torch.arange(batch_size).unsqueeze(1), spans[:, 1, :]]
         l_right_point = fencepost[torch.arange(batch_size).unsqueeze(1), spans[:, 2, :]]
 
-        l_left_span=torch.cat([l_lelf_point,l_split_point], dim=-1)
-        l_right_span=torch.cat([l_split_point, l_right_point], dim=-1)
+        l_left_span = torch.cat([l_lelf_point, l_split_point], dim=-1)
+        l_right_span = torch.cat([l_split_point, l_right_point], dim=-1)
 
-        l_left_span=self.mlp_label_l(l_left_span)
-        l_right_span=self.mlp_label_r(l_right_span)
+        l_left_span = self.mlp_label_l(l_left_span)
+        l_right_span = self.mlp_label_r(l_right_span)
 
-        s_label=self.label_attn(l_left_span,l_right_span).permute(0, 2, 3, 1)[:,mask_span,:]
+        s_label = self.label_attn(l_left_span, l_right_span).permute(0, 2, 3, 1)[:, mask_span, :]
         mask_label = lens.new_tensor(range(span_len)) < label_lens.view(-1, 1)
         # mask_label = mask_label & mask_label.new_ones(seq_len - 1, seq_len - 1).triu_(1)
         # mask_label = spans &
-        if int(label_lens.max())>0:
+        if int(label_lens.max()) > 0:
             label_loss = self.label_criterion(s_label[mask_label], labels[mask_label])
         else:
-            label_loss =0
+            label_loss = 0
 
         point_loss = -torch.sum(s_point) / num_s
 
@@ -231,7 +224,6 @@ class PointingDiscourseSentinfoModel(nn.Module):
         mask_l = lens.new_tensor(range(0, seq_len - 1)) > 0
         mask_r = lens.new_tensor(range(0, seq_len - 1)) <= (lens - 1).view(-1, 1, 1)
         mask_point = ~(mask_l & mask_r)
-
 
         # label mask
         # mask_label = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
@@ -256,11 +248,13 @@ class PointingDiscourseSentinfoModel(nn.Module):
 
             mask_sent = lens.new_zeros(batch_size, seq_len - 1, dtype=torch.bool)
             mask_sent = ~mask_sent.scatter(dim=1, index=sent_break, value=1)
-            mask_sent = mask_sent.unsqueeze(1).expand(batch_size,num_hyp, seq_len - 1)
-            point_r = sent_break.new_tensor(range(0, seq_len - 1)) == curr_input_r.unsqueeze(-1).expand(batch_size,num_hyp,
-                                                                                                  seq_len - 1)
+            mask_sent = mask_sent.unsqueeze(1).expand(batch_size, num_hyp, seq_len - 1)
+            point_r = sent_break.new_tensor(range(0, seq_len - 1)) == curr_input_r.unsqueeze(-1).expand(batch_size,
+                                                                                                        num_hyp,
+                                                                                                        seq_len - 1)
             mask_sent = mask_sent | point_r
-            range_include_breakpoint = (curr_input_r.unsqueeze(-1) > sent_break.unsqueeze(1)) & (sent_break.unsqueeze(1) > curr_input_l.unsqueeze(-1))
+            range_include_breakpoint = (curr_input_r.unsqueeze(-1) > sent_break.unsqueeze(1)) & (
+                        sent_break.unsqueeze(1) > curr_input_l.unsqueeze(-1))
             # print(range_include_breakpoint[0])
             range_include_breakpoint = range_include_breakpoint.sum(-1)
             point_range_breakpoint = torch.where(range_include_breakpoint.unsqueeze(-1) > 0,
@@ -276,7 +270,7 @@ class PointingDiscourseSentinfoModel(nn.Module):
 
             mask_decodelens = (t >= node_lens).view(batch_size, 1, 1).expand(batch_size, num_hyp, seq_len - 1)
             mask_no_parsing = ((curr_input_l.unsqueeze(-1).expand(point_range.shape).eq(0)) &
-                    curr_input_r.unsqueeze(-1).expand(point_range.shape).eq(0))
+                               curr_input_r.unsqueeze(-1).expand(point_range.shape).eq(0))
 
             span_l = fencepost[torch.arange(batch_size).unsqueeze(1), curr_input_l]
             span_r = fencepost[torch.arange(batch_size).unsqueeze(1), curr_input_r]
@@ -316,15 +310,16 @@ class PointingDiscourseSentinfoModel(nn.Module):
             # print(split_index)
             # print(curr_input_l)
             # print(base_index)
-            hyp_l = curr_input_l.gather(dim=1, index=base_index)
+            hyp_l = curr_input_l.gather(dim=1, index=base_index.type(torch.int64).type(torch.int64))
             # print(hyp_l)
-            hyp_r = curr_input_r.gather(dim=1, index=base_index)
+            hyp_r = curr_input_r.gather(dim=1, index=base_index.type(torch.int64).type(torch.int64))
             # print(split_index)
             # print(split_index.shape)
             base_index_expand = base_index.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 2, dec_len)
-            stacked_inputspan = stacked_inputspan.gather(dim=1, index=base_index_expand)
+            stacked_inputspan = stacked_inputspan.gather(dim=1, index=base_index_expand.type(torch.int64))
             base_index_parsing_order = base_index.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 3, dec_len)
-            stacked_parsing_order = stacked_parsing_order.gather(dim=1, index=base_index_parsing_order)
+            stacked_parsing_order = stacked_parsing_order.gather(dim=1,
+                                                                 index=base_index_parsing_order.type(torch.int64))
             stacked_parsing_order[:, :, 0, t] = hyp_l
             stacked_parsing_order[:, :, 1, t] = torch.where(
                 (split_index > hyp_l) & (split_index <= hyp_r), split_index, hyp_l)
@@ -340,16 +335,19 @@ class PointingDiscourseSentinfoModel(nn.Module):
             position_rightspan = (t + split_index - hyp_l).clamp(max=dec_len - 1)
             # print(position_rightspan)
             position_rightspan_expand = position_rightspan.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 2, 1)
-            candidate_rightspan = stacked_inputspan.gather(dim=3, index=position_rightspan_expand).squeeze(-1)
+            candidate_rightspan = stacked_inputspan.gather(dim=3,
+                                                           index=position_rightspan_expand.type(torch.int64)).squeeze(
+                -1)
             candidate_rightspan[:, :, 0] = torch.where(1 + split_index < hyp_r, split_index,
                                                        candidate_rightspan[:, :, 0])
             candidate_rightspan[:, :, 1] = torch.where(1 + split_index < hyp_r, hyp_r,
                                                        candidate_rightspan[:, :, 1])
-            stacked_inputspan.scatter_(dim=3, index=position_rightspan_expand, src=candidate_rightspan.unsqueeze(-1))
+            stacked_inputspan.scatter_(dim=3, index=position_rightspan_expand.type(torch.int64),
+                                       src=candidate_rightspan.unsqueeze(-1))
 
             batch_index = lens.new_tensor(range(batch_size)).view(batch_size, 1)
             # hx_index = (base_index + batch_index * prev_num_hyp).view(batch_size * num_hyp)
-            hx_index = (base_index + batch_index * num_hyp).view(batch_size * num_hyp)
+            hx_index = (base_index + batch_index * num_hyp).view(batch_size * num_hyp).type(torch.int64)
             if isinstance(new_last_hidden_state, tuple):
                 new_hx, new_cx = new_last_hidden_state
                 new_hx = new_hx[:, hx_index]
@@ -361,18 +359,18 @@ class PointingDiscourseSentinfoModel(nn.Module):
                 # decoder_init_state = (hx, cx)
             else:
                 new_last_hidden_state = new_last_hidden_state[:, hx_index]
-                last_hidden_state=torch.where(hyp_r.eq(0), last_hidden_state, new_last_hidden_state)
+                last_hidden_state = torch.where(hyp_r.eq(0), last_hidden_state, new_last_hidden_state)
 
         final_stacked_parsing_order = stacked_parsing_order[:, 0, :, :-1]
-        final_stacked_inputspan = stacked_inputspan[:,0,:,:-1]
+        final_stacked_inputspan = stacked_inputspan[:, 0, :, :-1]
         padding_nonparsing_mask = final_stacked_parsing_order[:, 2, :].ne(
             final_stacked_parsing_order[:, 1, :]).to(torch.long)
         _, padding_nonparsing_mask_index = torch.sort(padding_nonparsing_mask, dim=1, descending=True)
         final_parsing_order = final_stacked_parsing_order.gather(dim=-1, index=padding_nonparsing_mask_index.unsqueeze(
-            1).expand(batch_size, 3, num_steps))
+            1).expand(batch_size, 3, num_steps).type(torch.int64))
         final_parsing_length = padding_nonparsing_mask.sum(dim=-1)
         max_parsing_length = int(final_parsing_length.max())
-        final_parsing_order = final_parsing_order[:,:,:max_parsing_length]
+        final_parsing_order = final_parsing_order[:, :, :max_parsing_length]
 
         l_lelf_point = fencepost[torch.arange(batch_size).unsqueeze(1), final_parsing_order[:, 0, :]]
         l_split_point = fencepost[torch.arange(batch_size).unsqueeze(1), final_parsing_order[:, 1, :]]
@@ -383,13 +381,12 @@ class PointingDiscourseSentinfoModel(nn.Module):
 
         l_left_span = self.mlp_label_l(l_left_span)
         l_right_span = self.mlp_label_r(l_right_span)
-        mask_span = torch.eye(max_parsing_length, max_parsing_length,dtype=torch.bool).to(final_parsing_length.device)
-        if max_parsing_length>0:
+        mask_span = torch.eye(max_parsing_length, max_parsing_length, dtype=torch.bool).to(final_parsing_length.device)
+        if max_parsing_length > 0:
             s_label = self.label_attn(l_left_span, l_right_span).permute(0, 2, 3, 1)[:, mask_span, :]
             pred_labels = s_label.argmax(-1).tolist()
         else:
-            pred_labels =[]
-
+            pred_labels = []
 
         parsing_order_list = final_parsing_order.transpose(1, 2).tolist()
 
@@ -399,7 +396,7 @@ class PointingDiscourseSentinfoModel(nn.Module):
         # print(parsing_order_list)
         # pred_spans = [parsingorder2spandfs(order) for order in parsing_order_list]
         # pred_labels = s_label.argmax(-1).tolist()
-        preds = [[(i, k, j, label) for (i, k, j),label in zip(spans, labels)]
+        preds = [[(i, k, j, label) for (i, k, j), label in zip(spans, labels)]
                  for spans, labels in zip(parsing_order_list, pred_labels)]
         return preds
 

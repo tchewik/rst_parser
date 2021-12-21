@@ -526,6 +526,7 @@ class SubwordFieldSPMRL(Field):
         if self.tokenize is not None:
             sequence = self.tokenize(preprocess_spmrl(sequence))
         if self.lower:
+            print([token for token in sequence])
             sequence = [str.lower(token) for token in sequence]
         if self.fn is None and self.tokenize is None and not self.lower:
             sequence = preprocess_spmrl(sequence)
