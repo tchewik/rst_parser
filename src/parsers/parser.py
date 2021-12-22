@@ -29,8 +29,7 @@ class Parser(object):
     def train(self, train, dev, test,
               buckets=32,
               batch_size=5000,
-              # lr=8e-4,
-              lr=2e-3,
+              lr=8e-4,
               mu=.9,
               nu=.9,
               epsilon=1e-12,
@@ -194,21 +193,21 @@ class Parser(object):
 
         args = Config(**locals())
         args.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
         if os.path.exists(path):
             state = torch.load(path)
 
         args = state['args'].update(args)
-        # model = cls.MODEL(**args)
-        # model.load_pretrained(state['pretrained'])
-        parser = cls.load(**args)
-        parser.model = cls.MODEL(**parser.args)
-        parser.model.load_pretrained(parser.WORD.embed).to(args.device)
-        print(parser.WORD.embed)
-        parser.model.load_state_dict(state['state_dict'], False)
-        parser.model.to(args.device)
+        model = cls.MODEL(**args)
 
-        transform = state['transform']
-        model = parser.model
+        # print(cls.WORD.embed)
+        # model.load_pretrained(cls.WORD.embed).to(args.device)
+        # parser = cls.load(**args)
+        # parser.model = cls.MODEL(**parser.args)
+        # parser.model.load_pretrained(parser.WORD.embed).to(args.device)
+        # print(parser.WORD.embed)
+
+        # parser.model.to(args.device)
 
         # if os.path.exists(path):  # and not args.build:
         #     parser = cls.load(**args)
@@ -216,7 +215,41 @@ class Parser(object):
         #     parser.model.load_pretrained(parser.WORD.embed).to(args.device)
         #     return parser
 
-        return cls(args, model, transform)
+        # parser = cls.load(**args)
+
+        # print(parser.CHART)
+        # print(vars(parser.CHART.vocab))
+
+        transform = state['transform']
+
+        if state['pretrained']:
+            model.load_pretrained(state['pretrained']).to(args.device)
+        else:
+            parser = cls(args, model, transform)
+            model.load_pretrained(parser.WORD.embed).to(args.device)
+
+        # print(state['state_dict'])
+
+        model.load_state_dict(state['state_dict'])
+        model.eval()
+        model.to(args.device)
+
+        parser.model = model
+        parser.args = args
+        parser.transform = transform
+
+        if parser.args.feat in ('char', 'bert'):
+            parser.WORD, parser.FEAT = parser.transform.WORD
+        else:
+            parser.WORD, parser.FEAT = parser.transform.WORD, parser.transform.POS
+        parser.EDU_BREAK = parser.transform.EDU_BREAK
+        parser.GOLD_METRIC = parser.transform.GOLD_METRIC
+        # self.TREE = self.transform.TREE
+        parser.CHART = parser.transform.CHART
+        parser.PARSINGORDER = parser.transform.PARSINGORDER
+
+        return parser
+
 
     def save(self, path):
         model = self.model
@@ -226,7 +259,7 @@ class Parser(object):
         pretrained = state_dict.pop('pretrained.weight', None)
         state = {'name': self.NAME,
                  'args': self.args,
-                 'state_dict': state_dict,
+                 'state_dict': model.state_dict(),
                  'pretrained': pretrained,
                  'transform': self.transform}
         torch.save(state, path)

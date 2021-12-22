@@ -77,10 +77,10 @@ class PointingDiscourseSentinfoModel(nn.Module):
                  embed_dropout=.33,
                  n_lstm_hidden=400,
                  n_lstm_layers=3,
-                 lstm_dropout=.33,
+                 lstm_dropout=.5,
                  n_mlp_span=500,
                  n_mlp_label=100,
-                 mlp_dropout=.33,
+                 mlp_dropout=.5,
                  feat_pad_index=0,
                  pad_index=0,
                  unk_index=1,
@@ -202,7 +202,8 @@ class PointingDiscourseSentinfoModel(nn.Module):
         mask_label = lens.new_tensor(range(span_len)) < label_lens.view(-1, 1)
         # mask_label = mask_label & mask_label.new_ones(seq_len - 1, seq_len - 1).triu_(1)
         # mask_label = spans &
-        if int(label_lens.max()) > 0:
+
+        if int(label_lens.max()) > -100:
             label_loss = self.label_criterion(s_label[mask_label], labels[mask_label])
         else:
             label_loss = 0
