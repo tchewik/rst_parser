@@ -1,6 +1,7 @@
-export TEST_FILE='dummy_format_data/sample_full_data_format'
-export PREDICT_PATH='saved_model/model_pointing_discourse_gold_segmentation_edu_rep_Full_RNF_51.1.pt'
-export PREDICT_OUTPUT_PATH='dummy_format_data/sample_pred_file_gold_segmentation_edu_rep'
+export TEST_FILE='./processed_data/test_approach1'
+#export PREDICT_PATH='saved_model/model_pointing_discourse_gold_segmentation_edu_rep_Full_RNF_51.1.pt'
+PREDICT_PATH='exp/ptb.pointing.discourse.gold_segmentation_edu_rep.char/2021_12_24_15_17_42/model_dev_UF_63.94_NF_42.44_RF_30.33.pt'
+export PREDICT_OUTPUT_PATH='dummy_format_data/predicted_beam'
 export BATCH_SIZE=4000
 export BEAM_SIZE=20
 

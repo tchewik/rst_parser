@@ -213,7 +213,7 @@ class PointingDiscourseSentinfoModel(nn.Module):
         loss = point_loss + label_loss
         return loss
 
-    def decode(self, words, feats, sent_break, beam_size=1):
+    def decode(self, words, feats, sent_break, beam_size=20):
         fencepost, span_split, decoder_init_state = self.encoder(words, feats)
         batch_size, seq_len = words.shape
         dec_len = seq_len - 2

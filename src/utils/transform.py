@@ -2518,7 +2518,7 @@ class DiscourseTreeDocEduGold(Transform):
                     Nuclearity_left, Nuclearity_right, Relation_left, Relation_right \
                         = Label2RelationAndNucleus(label)
                     node = f'({i}:{Nuclearity_left}={Relation_left}:{k - 1},{k}:{Nuclearity_right}={Relation_right}:{j - 1})'
-                result.append(node)
+                    result.append(node)
             return ' '.join(result)
 
     @classmethod

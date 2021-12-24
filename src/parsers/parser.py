@@ -142,7 +142,7 @@ class Parser(object):
 
         logger.info("Load the data")
         dataset = Dataset(self.transform, data)
-        dataset.build(args.batch_size, args.buckets)
+        dataset.build(args.batch_size, args.buckets, shuffle=False)
         logger.info(f"\n{dataset}")
 
         logger.info("Make predictions on the dataset")
@@ -245,8 +245,11 @@ class Parser(object):
         parser.EDU_BREAK = parser.transform.EDU_BREAK
         parser.GOLD_METRIC = parser.transform.GOLD_METRIC
         # self.TREE = self.transform.TREE
-        parser.CHART = parser.transform.CHART
-        parser.PARSINGORDER = parser.transform.PARSINGORDER
+        try:
+            parser.CHART = parser.transform.CHART
+            parser.PARSINGORDER = parser.transform.PARSINGORDER
+        except:
+            print('parser.CHART and parser.PARSINGORDER parameters are not available for this model.')
 
         return parser
 

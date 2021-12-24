@@ -6,7 +6,7 @@ export PRETRAINED_EMBEDDING='data/model.txt'
 export N_EMBED=300
 
 export BERT_MODEL='xlnet-base-cased'
-export BATCH_SIZE=4000
+export BATCH_SIZE=10000
 export DEVICE=1
 python -m src.cmds.pointing_discourse_sentinfo train -b -d $DEVICE -p exp/ptb.pointing.discourse.sent_info.$FEAT \
 --data_path $DATA_PATH -f $FEAT --learning_rate_schedule $LEARNING_RATE_SCHEDULE \

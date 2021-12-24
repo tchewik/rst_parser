@@ -64,12 +64,8 @@ class PointingDiscourseGoldsegmentationEduRepParser(Parser):
               verbose=True,
               **kwargs):
         train = os.path.join(data_path, "train_approach1")
-        # train = os.path.join(data_path, "test_approach1")
-        # train = {'sentences': os.path.join(data_path, "Testing_InputSentences.pickle"),
-        #         'edu_break': os.path.join(data_path, "Testing_EDUBreaks.pickle"),
-        #         'golden_metric': os.path.join(data_path, "Testing_GoldenLabelforMetric.pickle")}
+        dev = os.path.join(data_path, "dev_approach1")
         test = os.path.join(data_path, "test_approach1")
-        # test = os.path.join(data_path, "train_approach1")
 
         args = self.args.update(locals())
         init_logger(logger, verbose=args.verbose)
@@ -176,7 +172,7 @@ class PointingDiscourseGoldsegmentationEduRepParser(Parser):
         #          'golden_metric': os.path.join(data, "Testing_GoldenLabelforMetric.pickle")}
         # dataset = Dataset(self.transform, test)
         dataset = Dataset(self.transform, data)
-        dataset.build(args.batch_size, args.buckets)
+        dataset.build(args.batch_size, n_buckets=1, shuffle=False)
         logger.info(f"\n{dataset}")
 
         logger.info("Make predictions on the dataset")
@@ -279,7 +275,7 @@ class PointingDiscourseGoldsegmentationEduRepParser(Parser):
     def _predict(self, loader):
         self.model.eval()
 
-        # preds = {'trees': [], 'gold_trees':[],'edu_break':[], 'golden_metric':[]}
+        #preds = {'trees': [], 'gold_trees':[],'edu_break':[], 'golden_metric':[]}
         preds = {'trees': []}
 
         # for words, feats in progress_bar(loader):
@@ -301,12 +297,12 @@ class PointingDiscourseGoldsegmentationEduRepParser(Parser):
                 [(i, k, j, self.PARSING_LABEL_EDU.vocab.itos[label])
                  for i, k, j, label in pred])
                 for pred in preds_])
-            # preds['gold_trees'].extend([DiscourseTreeDocEduGold.build_gold(_edu_break, _golden_metric)
-            #         for _edu_break, _golden_metric in zip(original_edu_break,golden_metric)])
-            # preds['edu_break'].extend(edu_break)
-            # preds['golden_metric'].extend(golden_metric)
-            # if self.args.prob:
-            #     probs.extend([prob[:i-1, 1:i].cpu() for i, prob in zip(lens, s_span.unbind())])
+        #     preds['gold_trees'].extend([DiscourseTreeDocEduGold.build_gold(_edu_break, _golden_metric)
+        #             for _edu_break, _golden_metric in zip(original_edu_break,golden_metric)])
+        #     preds['edu_break'].extend(edu_break)
+        #     preds['golden_metric'].extend(golden_metric)
+        #     if self.args.prob:
+        #         probs.extend([prob[:i-1, 1:i].cpu() for i, prob in zip(lens, s_span.unbind())])
         # if self.args.prob:
         #     preds['probs'] = probs
 

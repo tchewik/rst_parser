@@ -2,12 +2,11 @@
 
 import torch
 import torch.nn as nn
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+
 from src.modules import MLP, BertEmbedding, Biaffine, BiLSTM, CharLSTM, BertEmbeddingfinetuning
 from src.modules.dropout import IndependentDropout, SharedDropout
-from src.modules.treecrf import CRFConstituency
 from src.utils import Config
-from src.utils.alg import cky
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class EncoderFenceRnn(nn.Module):
@@ -99,22 +98,22 @@ class EncoderFenceRnn(nn.Module):
                                        n_out=n_feat_embed,
                                        pad_index=feat_pad_index)
         elif feat == 'bert':
-            if kwargs['bert_requires_grad']=='False':
-                bert_requires_grad=False
-            elif kwargs['bert_requires_grad']=='True':
-                bert_requires_grad=True
+            if kwargs['bert_requires_grad'] == 'False':
+                bert_requires_grad = False
+            elif kwargs['bert_requires_grad'] == 'True':
+                bert_requires_grad = True
             if bert_requires_grad:
                 self.feat_embed = BertEmbeddingfinetuning(model=bert,
+                                                          n_layers=n_bert_layers,
+                                                          n_out=n_feat_embed,
+                                                          pad_index=feat_pad_index,
+                                                          dropout=mix_dropout)
+            else:
+                self.feat_embed = BertEmbedding(model=bert,
                                                 n_layers=n_bert_layers,
                                                 n_out=n_feat_embed,
                                                 pad_index=feat_pad_index,
                                                 dropout=mix_dropout)
-            else:
-                self.feat_embed = BertEmbedding(model=bert,
-                                            n_layers=n_bert_layers,
-                                            n_out=n_feat_embed,
-                                            pad_index=feat_pad_index,
-                                            dropout=mix_dropout)
             self.n_feat_embed = self.feat_embed.n_out
         elif feat == 'tag':
             self.feat_embed = nn.Embedding(num_embeddings=n_feats,
@@ -124,7 +123,7 @@ class EncoderFenceRnn(nn.Module):
         self.embed_dropout = IndependentDropout(p=embed_dropout)
 
         # the lstm layer
-        self.lstm = BiLSTM(input_size=n_embed+n_feat_embed,
+        self.lstm = BiLSTM(input_size=n_embed + n_feat_embed,
                            hidden_size=n_lstm_hidden,
                            num_layers=n_lstm_layers,
                            dropout=lstm_dropout)
@@ -140,13 +139,12 @@ class EncoderFenceRnn(nn.Module):
         self.mlp_span_splitting = MLP(n_in=n_lstm_hidden * 2,
                                       n_out=n_mlp_span,
                                       dropout=mlp_dropout)
-        self.mlp_label_l = MLP(n_in=n_lstm_hidden*2,
+        self.mlp_label_l = MLP(n_in=n_lstm_hidden * 2,
                                n_out=n_mlp_label,
                                dropout=mlp_dropout)
-        self.mlp_label_r = MLP(n_in=n_lstm_hidden*2,
+        self.mlp_label_r = MLP(n_in=n_lstm_hidden * 2,
                                n_out=n_mlp_label,
                                dropout=mlp_dropout)
-
 
         # the Biaffine layers
         # self.span_attn = Biaffine(n_in=n_mlp_span,
@@ -204,7 +202,7 @@ class EncoderFenceRnn(nn.Module):
         # concatenate the word and feat representations
         embed = torch.cat((word_embed, feat_embed), -1)
 
-        x = pack_padded_sequence(embed, mask.sum(1), True, False)
+        x = pack_padded_sequence(embed, mask.sum(1).to('cpu'), True, False)
         x, hidden = self.lstm(x)
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.lstm_dropout(x)
@@ -261,6 +259,7 @@ class EncoderFenceRnn(nn.Module):
                 hn = torch.cat([hn, hn.new_zeros(self.decoder_layers - 1, batch, 2 * hidden_size)], dim=0)
         return hn
 
+
 class DecoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size, rnn_layers=6, dropout=0.2, decoder_type='lstm'):
         super(DecoderRNN, self).__init__()
@@ -291,6 +290,7 @@ class DecoderRNN(nn.Module):
         outputs, hidden = self.decoder_network(input_hidden_states, last_hidden)
         # Return output and final hidden state
         return outputs, hidden
+
 
 class EncoderFenceDiscourseRnn(nn.Module):
     """
@@ -403,7 +403,7 @@ class EncoderFenceDiscourseRnn(nn.Module):
         self.embed_dropout = IndependentDropout(p=embed_dropout)
 
         # the lstm layer
-        self.lstm = BiLSTM(input_size=n_embed+n_feat_embed,
+        self.lstm = BiLSTM(input_size=n_embed + n_feat_embed,
                            hidden_size=n_lstm_hidden,
                            num_layers=n_lstm_layers,
                            dropout=lstm_dropout)
@@ -541,6 +541,7 @@ class EncoderFenceDiscourseRnn(nn.Module):
                 hn = torch.cat([hn, hn.new_zeros(self.decoder_layers - 1, batch, 2 * hidden_size)], dim=0)
         return hn
 
+
 class EncoderFenceDiscourseEduRepRnn(nn.Module):
     """
 
@@ -646,16 +647,16 @@ class EncoderFenceDiscourseEduRepRnn(nn.Module):
         self.embed_dropout = IndependentDropout(p=embed_dropout)
 
         # the lstm layer
-        self.token_lstm = BiLSTM(input_size=n_embed+n_feat_embed,
-                           hidden_size=n_lstm_hidden,
-                           num_layers=n_lstm_layers,
-                           dropout=lstm_dropout)
+        self.token_lstm = BiLSTM(input_size=n_embed + n_feat_embed,
+                                 hidden_size=n_lstm_hidden,
+                                 num_layers=n_lstm_layers,
+                                 dropout=lstm_dropout)
         self.token_lstm_dropout = SharedDropout(p=lstm_dropout)
 
         self.edu_lstm = BiLSTM(input_size=n_lstm_hidden * 2,
-                           hidden_size=n_lstm_hidden,
-                           num_layers=n_lstm_layers,
-                           dropout=lstm_dropout)
+                               hidden_size=n_lstm_hidden,
+                               num_layers=n_lstm_layers,
+                               dropout=lstm_dropout)
         self.edu_lstm_dropout = SharedDropout(p=lstm_dropout)
         self.decoder_layers = n_lstm_layers
 
@@ -711,7 +712,7 @@ class EncoderFenceDiscourseEduRepRnn(nn.Module):
         # concatenate the word and feat representations
         embed = torch.cat((word_embed, feat_embed), -1)
 
-        x = pack_padded_sequence(embed, mask.sum(1), True, False)
+        x = pack_padded_sequence(embed, mask.sum(1).to('cpu'), True, False)
         x, hidden = self.token_lstm(x)
         x, _ = pad_packed_sequence(x, True, total_length=seq_len)
         x = self.token_lstm_dropout(x)
@@ -719,18 +720,17 @@ class EncoderFenceDiscourseEduRepRnn(nn.Module):
         x_f, x_b = x.chunk(2, -1)
         fencepost = torch.cat((x_f[:, :-1], x_b[:, 1:]), -1)
 
-        #find edu_boundary_representation
+        # find edu_boundary_representation
         padded_zero = edu_break.new_zeros(batch_size)
         edu_include_boundary_zero = torch.cat([padded_zero.unsqueeze(-1), edu_break], dim=1)
         edu_len_include_boundary_zero = edu_include_boundary_zero.ne(self.pad_index).sum(1) + 1
         _, edu_len = edu_include_boundary_zero.shape
 
         edu_boundary_emb = fencepost[torch.arange(batch_size).unsqueeze(1), edu_include_boundary_zero]
-        edu_boundary_rep = pack_padded_sequence(edu_boundary_emb, edu_len_include_boundary_zero, True, False)
+        edu_boundary_rep = pack_padded_sequence(edu_boundary_emb, edu_len_include_boundary_zero.to('cpu'), True, False)
         edu_boundary_rep, hidden_edu = self.edu_lstm(edu_boundary_rep)
         edu_boundary_rep, _ = pad_packed_sequence(edu_boundary_rep, True, total_length=edu_len)
         edu_boundary_rep = self.edu_lstm_dropout(edu_boundary_rep)
-
 
         # decoder_init_state = self._transform_decoder_init_state(hidden)
         # span_split = self.mlp_span_splitting(fencepost)

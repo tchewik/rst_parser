@@ -2,14 +2,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from src.modules import MLP, BertEmbedding, Biaffine, BiLSTM, CharLSTM
-from src.modules.dropout import IndependentDropout, SharedDropout
-from src.modules.treecrf import CRFConstituency
+from src.modules import MLP, BertEmbedding, Biaffine
 from src.modules.module_fence_rnn import EncoderFenceDiscourseEduRepRnn, DecoderRNN
 from src.utils.fn import parsingorder2spandfs
 from src.utils import Config
-from src.utils.alg import cky
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 
 class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
@@ -95,30 +91,30 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
         self.args = Config().update(locals())
         # the embedding layer
         self.encoder = EncoderFenceDiscourseEduRepRnn(n_words=n_words,
-                 n_feats=n_feats,
-                 n_labels=n_labels,
-                 feat=feat,
-                 n_embed=n_embed,
-                 n_feat_embed=n_feat_embed,
-                 n_char_embed=n_char_embed,
-                 bert=bert,
-                 n_bert_layers=n_bert_layers,
-                 mix_dropout=mix_dropout,
-                 embed_dropout=embed_dropout,
-                 n_lstm_hidden=n_lstm_hidden,
-                 n_lstm_layers=n_lstm_layers,
-                 lstm_dropout=lstm_dropout,
-                 n_mlp_span=n_mlp_span,
-                 n_mlp_label=n_mlp_label,
-                 mlp_dropout=mlp_dropout,
-                 feat_pad_index=feat_pad_index,
-                 pad_index=pad_index,
-                 unk_index=unk_index,
-                 **kwargs)
-        self.decoder=DecoderRNN(input_size=n_mlp_span * 2,
-		                        hidden_size=n_lstm_hidden * 2,
-		                        rnn_layers=n_lstm_layers,
-		                        dropout=lstm_dropout)
+                                                      n_feats=n_feats,
+                                                      n_labels=n_labels,
+                                                      feat=feat,
+                                                      n_embed=n_embed,
+                                                      n_feat_embed=n_feat_embed,
+                                                      n_char_embed=n_char_embed,
+                                                      bert=bert,
+                                                      n_bert_layers=n_bert_layers,
+                                                      mix_dropout=mix_dropout,
+                                                      embed_dropout=embed_dropout,
+                                                      n_lstm_hidden=n_lstm_hidden,
+                                                      n_lstm_layers=n_lstm_layers,
+                                                      lstm_dropout=lstm_dropout,
+                                                      n_mlp_span=n_mlp_span,
+                                                      n_mlp_label=n_mlp_label,
+                                                      mlp_dropout=mlp_dropout,
+                                                      feat_pad_index=feat_pad_index,
+                                                      pad_index=pad_index,
+                                                      unk_index=unk_index,
+                                                      **kwargs)
+        self.decoder = DecoderRNN(input_size=n_mlp_span * 2,
+                                  hidden_size=n_lstm_hidden * 2,
+                                  rnn_layers=n_lstm_layers,
+                                  dropout=lstm_dropout)
         self.mlp_span_l_decoder = MLP(n_in=n_lstm_hidden * 2,
                                       n_out=n_mlp_span,
                                       dropout=mlp_dropout)
@@ -160,14 +156,13 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
         batch_size, edu_len = edu_break.shape
         _, _, dec_len = parsing_order_edu.shape
         lens = edu_break.ne(self.args.pad_index).sum(1) + 1
-        edu_len_boundary=edu_len+1
+        edu_len_boundary = edu_len + 1
 
         # pointing mask
         mask_l = lens.new_tensor(range(edu_len_boundary)) > 0
         mask_r = lens.new_tensor(range(edu_len_boundary)) < (lens - 1).view(-1, 1, 1)
         mask_point = ~(mask_l & mask_r)
         mask_point = mask_point.expand(batch_size, dec_len, edu_len_boundary)
-
 
         span_l = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), parsing_order_edu[:, 0, :]]
         span_r = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), parsing_order_edu[:, 2, :]]
@@ -191,29 +186,28 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
         s_point[s_point != s_point] = 0
 
         # label mask
-        _, _, span_len=edu_spans.shape
-        mask_span=torch.eye(span_len,span_len, dtype=torch.bool).to(edu_spans.device)
-        label_lens = edu_spans[:,1,:].ne(self.args.pad_index).sum(1)
-
+        _, _, span_len = edu_spans.shape
+        mask_span = torch.eye(span_len, span_len, dtype=torch.bool).to(edu_spans.device)
+        label_lens = edu_spans[:, 1, :].ne(self.args.pad_index).sum(1)
 
         l_lelf_point = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), edu_spans[:, 0, :]]
         l_split_point = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), edu_spans[:, 1, :]]
         l_right_point = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), edu_spans[:, 2, :]]
 
-        l_left_span=torch.cat([l_lelf_point,l_split_point], dim=-1)
-        l_right_span=torch.cat([l_split_point, l_right_point], dim=-1)
+        l_left_span = torch.cat([l_lelf_point, l_split_point], dim=-1)
+        l_right_span = torch.cat([l_split_point, l_right_point], dim=-1)
 
-        l_left_span=self.mlp_label_l(l_left_span)
-        l_right_span=self.mlp_label_r(l_right_span)
+        l_left_span = self.mlp_label_l(l_left_span)
+        l_right_span = self.mlp_label_r(l_right_span)
 
-        s_label=self.label_attn(l_left_span,l_right_span).permute(0, 2, 3, 1)[:,mask_span,:]
+        s_label = self.label_attn(l_left_span, l_right_span).permute(0, 2, 3, 1)[:, mask_span, :]
         mask_label = lens.new_tensor(range(span_len)) < label_lens.view(-1, 1)
         # mask_label = mask_label & mask_label.new_ones(seq_len - 1, seq_len - 1).triu_(1)
         # mask_label = spans &
-        if int(label_lens.max())>0:
+        if int(label_lens.max()) > 0:
             label_loss = self.label_criterion(s_label[mask_label], edu_labels[mask_label])
         else:
-            label_loss =0
+            label_loss = 0
 
         point_loss = -torch.sum(s_point) / num_s
 
@@ -224,14 +218,13 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
         edu_boundary_rep, span_split_edu, decoder_init_state_edu = self.encoder(words, feats, edu_break)
         batch_size, edu_len = edu_break.shape
         lens = edu_break.ne(self.args.pad_index).sum(1) + 1
-        edu_len_boundary=edu_len+1
-        dec_len=edu_len
-        node_lens=lens-2
+        edu_len_boundary = edu_len + 1
+        dec_len = edu_len
+        node_lens = lens - 2
 
         mask_l = lens.new_tensor(range(edu_len_boundary)) > 0
         mask_r = lens.new_tensor(range(edu_len_boundary)) < (lens - 1).view(-1, 1, 1)
         mask_point = ~(mask_l & mask_r)
-
 
         # label mask
         # mask_label = lens.new_tensor(range(seq_len - 1)) < lens.view(-1, 1, 1)
@@ -292,15 +285,16 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
             # print(split_index)
             # print(curr_input_l)
             # print(base_index)
-            hyp_l = curr_input_l.gather(dim=1, index=base_index)
+            hyp_l = curr_input_l.gather(dim=1, index=base_index.type(torch.int64))
             # print(hyp_l)
-            hyp_r = curr_input_r.gather(dim=1, index=base_index)
+            hyp_r = curr_input_r.gather(dim=1, index=base_index.type(torch.int64))
             # print(split_index)
             # print(split_index.shape)
             base_index_expand = base_index.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 2, dec_len)
-            stacked_inputspan = stacked_inputspan.gather(dim=1, index=base_index_expand)
+            stacked_inputspan = stacked_inputspan.gather(dim=1, index=base_index_expand.type(torch.int64))
             base_index_parsing_order = base_index.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 3, dec_len)
-            stacked_parsing_order = stacked_parsing_order.gather(dim=1, index=base_index_parsing_order)
+            stacked_parsing_order = stacked_parsing_order.gather(dim=1,
+                                                                 index=base_index_parsing_order.type(torch.int64))
             stacked_parsing_order[:, :, 0, t] = hyp_l
             stacked_parsing_order[:, :, 1, t] = torch.where(
                 (split_index > hyp_l) & (split_index < hyp_r), split_index, hyp_l)
@@ -316,7 +310,9 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
             position_rightspan = (t + split_index - hyp_l).clamp(max=dec_len - 1)
             # print(position_rightspan)
             position_rightspan_expand = position_rightspan.unsqueeze(-1).unsqueeze(-1).expand(batch_size, num_hyp, 2, 1)
-            candidate_rightspan = stacked_inputspan.gather(dim=3, index=position_rightspan_expand).squeeze(-1)
+            candidate_rightspan = stacked_inputspan.gather(dim=3,
+                                                           index=position_rightspan_expand.type(torch.int64)).squeeze(
+                -1)
             candidate_rightspan[:, :, 0] = torch.where(1 + split_index < hyp_r, split_index,
                                                        candidate_rightspan[:, :, 0])
             candidate_rightspan[:, :, 1] = torch.where(1 + split_index < hyp_r, hyp_r,
@@ -324,7 +320,7 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
             stacked_inputspan.scatter_(dim=3, index=position_rightspan_expand, src=candidate_rightspan.unsqueeze(-1))
 
             batch_index = lens.new_tensor(range(batch_size)).view(batch_size, 1)
-            hx_index = (base_index + batch_index * prev_num_hyp).view(batch_size * num_hyp)
+            hx_index = (base_index + batch_index * prev_num_hyp).view(batch_size * num_hyp).type(torch.int64)
             if isinstance(decoder_init_state_edu, tuple):
                 hx, cx = decoder_init_state_edu
                 hx = hx[:, hx_index]
@@ -333,19 +329,21 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
             else:
                 decoder_init_state_edu = decoder_init_state_edu[:, hx_index]
 
-
         final_stacked_parsing_order = stacked_parsing_order[:, 0, :, :-1]
 
-        #convert structure into edu structure
+        # convert structure into edu structure
         padded_zero = edu_break.new_zeros(batch_size)
         edu_include_boundary_zero = torch.cat([padded_zero.unsqueeze(-1), edu_break], dim=1)
-        edu_include_boundary_zero_extend = edu_include_boundary_zero.unsqueeze(1).expand(batch_size, 3, edu_include_boundary_zero.size(1))
+        edu_include_boundary_zero_extend = edu_include_boundary_zero.unsqueeze(1).expand(batch_size, 3,
+                                                                                         edu_include_boundary_zero.size(
+                                                                                             1))
         final_stacked_parsing_order_edu = edu_include_boundary_zero_extend.gather(dim=-1,
-                                                                                 index=final_stacked_parsing_order)
+                                                                                  index=final_stacked_parsing_order.type(
+                                                                                      torch.int64))
         # final_parsing_length = edu_break.ne(0).sum(-1) - 1
         # max_parsing_length = int(final_parsing_length.max())
 
-        #make label prediction
+        # make label prediction
 
         l_lelf_point = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), final_stacked_parsing_order[:, 0, :]]
         l_split_point = edu_boundary_rep[torch.arange(batch_size).unsqueeze(1), final_stacked_parsing_order[:, 1, :]]
@@ -356,13 +354,12 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
 
         l_left_span = self.mlp_label_l(l_left_span)
         l_right_span = self.mlp_label_r(l_right_span)
-        mask_span = torch.eye(edu_len-1, edu_len-1,dtype=torch.bool).to(edu_break.device)
+        mask_span = torch.eye(edu_len - 1, edu_len - 1, dtype=torch.bool).to(edu_break.device)
         s_label = self.label_attn(l_left_span, l_right_span).permute(0, 2, 3, 1)[:, mask_span, :]
         pred_labels = s_label.argmax(-1).tolist()
 
-
         parsing_order_list = final_stacked_parsing_order_edu.transpose(1, 2).tolist()
-        pred_label_list=[]
+        pred_label_list = []
         # print(parsing_order_list)
         # print(pred_labels)
 
@@ -373,7 +370,7 @@ class PointingDiscourseGoldsegmentationEduRepModel(nn.Module):
         # print(pred_label_list)
         # input()
 
-        preds = [[(i, k, j, label) for (i, k, j),label in zip(spans, labels)]
+        preds = [[(i, k, j, label) for (i, k, j), label in zip(spans, labels)]
                  for spans, labels in zip(parsing_order_list, pred_labels)]
         return preds
 

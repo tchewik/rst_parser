@@ -41,7 +41,7 @@ class PointingDiscourseSentinfoParser(Parser):
               buckets=32,
               batch_size=5000,
               # lr=8e-4,
-              lr=5e-04,
+              lr=2e-03,
               mu=.9,
               nu=.9,
               epsilon=1e-12,

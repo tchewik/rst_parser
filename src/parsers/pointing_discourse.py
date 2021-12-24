@@ -61,11 +61,6 @@ class PointingDiscourseParser(Parser):
         args = self.args.update(locals())
         init_logger(logger, verbose=args.verbose)
 
-        logger.info('args:')
-        logger.info(f'{vars(args)}')
-        logger.info('kwargs:')
-        logger.info(f'{kwargs}')
-
         self.transform.train()
         if dist.is_initialized():
             args.batch_size = args.batch_size // dist.get_world_size()
@@ -77,7 +72,6 @@ class PointingDiscourseParser(Parser):
         dev.build(args.batch_size, args.buckets)
         test.build(args.batch_size, args.buckets)
         logger.info(f"\n{'train:':6} {train}\n{'dev:':6} {dev}\n{'test:':6} {test}\n")
-        # logger.info(f"\n{'train:':6} {train}\n{'test:':6} {test}\n")
 
         logger.info(f"{self.model}\n")
         if dist.is_initialized():
@@ -117,7 +111,6 @@ class PointingDiscourseParser(Parser):
 
                 if is_master():
                     self.save(args.path + dev_metric_name)
-                    # self.save(args.path + test_metric_name)
                 logger.info(f"{t}s elapsed (saved)\n")
                 keep_last_n_checkpoint(args.path + '_test_', n=5)
             else:
@@ -134,7 +127,6 @@ class PointingDiscourseParser(Parser):
 
         logger.info(f"Epoch {best_e} saved")
         logger.info(f"{'dev:':6} - {best_metric}")
-        # logger.info(f"{'test:':6} - {metric}")
         logger.info(f"{elapsed}s elapsed, {elapsed / epoch}s/epoch")
 
     def evaluate(self, data, buckets=8, batch_size=5000,
